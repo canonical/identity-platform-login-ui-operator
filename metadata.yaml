@@ -1,0 +1,29 @@
+# This file populates the Overview on Charmhub.
+# See https://juju.is/docs/sdk/metadata-reference for a checklist and guidance.
+
+# The charm package name, no spaces (required)
+# See https://juju.is/docs/sdk/naming#heading--naming-charms for guidance.
+name: kratos-ui
+
+# The following metadata are human-readable and will be published prominently on Charmhub.
+
+display-name: Kratos UI
+
+summary: Kratos UI
+
+description: |
+  Kratos UI
+
+containers:
+  kratos-ui:
+    resource: kratos-ui-image
+
+resources:
+  kratos-ui-image:
+    type: oci-image
+    description: OCI image for kratos-ui
+    upstream-source: nsklikas/kratos-ui:latest
+
+requires:
+  ingress:
+    interface: ingress
