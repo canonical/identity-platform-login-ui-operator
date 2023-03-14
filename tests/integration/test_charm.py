@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2023 nikos
+# Copyright 2023 bence
 # See LICENSE file for licensing details.
 
 import asyncio

@@ -1,29 +1,26 @@
-# This file populates the Overview on Charmhub.
-# See https://juju.is/docs/sdk/metadata-reference for a checklist and guidance.
+# Copyright 2023 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: identity-platform-login-ui-operator
+assumes:
+  - k8s-api
 
-# The charm package name, no spaces (required)
-# See https://juju.is/docs/sdk/naming#heading--naming-charms for guidance.
-name: kratos-ui
 
-# The following metadata are human-readable and will be published prominently on Charmhub.
-
-display-name: Kratos UI
-
-summary: Kratos UI
+summary: Operator for Identity platform UI backend and proxy
 
 description: |
-  Kratos UI
+  Operator for Identity platform UI backend and proxy
 
 containers:
-  kratos-ui:
-    resource: kratos-ui-image
+  login_ui:
+    resource: login-ui-image
 
+# This field populates the Resources tab on Charmhub.
 resources:
-  kratos-ui-image:
+  login-ui-image:
     type: oci-image
-    description: OCI image for kratos-ui
-    upstream-source: nsklikas/kratos-ui:latest
+    description: OCI image for login-ui
+    upstream-source: ghcr.io/canonical/identity-platform-login-ui:latest
 
 requires:
-  ingress:
+  public-ingress:
     interface: ingress

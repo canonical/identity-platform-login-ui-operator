@@ -1,74 +1,101 @@
-# Copyright 2023 nikos
+# Copyright 2023 bence
 # See LICENSE file for licensing details.
 #
 # Learn more about testing at: https://juju.is/docs/sdk/testing
 
-import unittest
+import pytest
+from ops.model import ActiveStatus, WaitingStatus
+import json
+import yaml
 
-import ops.testing
-from charm import KratosUiOperatorCharm
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
-from ops.testing import Harness
+CONTAINER_NAME = "login_ui"
+TEST_PORT = "55555"
+TEST_HYDRA_URL = "http://hydra:port"
+TEST_KRATOS_URL = "http://kratos:port"
 
 
-class TestCharm(unittest.TestCase):
-    def setUp(self):
-        # Enable more accurate simulation of container networking.
-        # For more information, see https://juju.is/docs/sdk/testing#heading--simulate-can-connect
-        ops.testing.SIMULATE_CAN_CONNECT = True
-        self.addCleanup(setattr, ops.testing, "SIMULATE_CAN_CONNECT", False)
+def setup_ingress_relation(harness, type):
+    relation_id = harness.add_relation(f"{type}-ingress", f"{type}-traefik")
+    harness.add_relation_unit(relation_id, f"{type}-traefik/0")
+    harness.update_relation_data(
+        relation_id,
+        f"{type}-traefik",
+        {"ingress": json.dumps({"url": f"http://{type}:80/{harness.model.name}-identity-platform-login-ui"})},
+    )
+    return relation_id
 
-        self.harness = Harness(KratosUiOperatorCharm)
-        self.addCleanup(self.harness.cleanup)
-        self.harness.begin()
 
-    def test_httpbin_pebble_ready(self):
-        # Expected plan after Pebble ready with default config
-        expected_plan = {
+def test_not_leader(harness):
+    harness.set_leader(False)
+
+    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
+
+    assert (
+        "status_set",
+        "waiting",
+        "Waiting to connect to Login_UI container",
+        {"is_app": False},
+    ) in harness._get_backend_calls()
+
+
+def test_install_can_connect(harness):
+    harness.set_can_connect(CONTAINER_NAME, True)
+    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
+
+    assert harness.charm.unit.status == ActiveStatus()
+
+
+def test_install_can_not_connect(harness):
+    harness.set_can_connect(CONTAINER_NAME, False)
+    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
+
+    assert harness.charm.unit.status == WaitingStatus("Waiting to connect to Login_UI container")
+
+
+def test_layer_updated(harness) -> None:
+    harness.set_can_connect(CONTAINER_NAME, True)
+    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
+
+    harness.update_config({"hydra_url": TEST_HYDRA_URL})
+    harness.update_config({"kratos_url": TEST_KRATOS_URL})
+    harness.update_config({"port": TEST_PORT})
+
+    expected_layer = {
+            "summary": "login_ui layer",
+            "description": "pebble config layer for identity platform login ui",
             "services": {
-                "httpbin": {
+                CONTAINER_NAME: {
                     "override": "replace",
-                    "summary": "httpbin",
-                    "command": "gunicorn -b 0.0.0.0:80 httpbin:app -k gevent",
+                    "summary": "identity platform login ui",
+                    "command": "/id/identity_platform_login_ui",
                     "startup": "enabled",
-                    "environment": {"GUNICORN_CMD_ARGS": "--log-level info"},
+                    "environment": {
+                        'HYDRA_ADMIN_URL': TEST_HYDRA_URL,
+                        'KRATOS_PUBLIC_URL': TEST_KRATOS_URL,
+                        'PORT': TEST_PORT
+                    },
                 }
             },
         }
-        # Simulate the container coming up and emission of pebble-ready event
-        self.harness.container_pebble_ready("httpbin")
-        # Get the plan now we've run PebbleReady
-        updated_plan = self.harness.get_container_pebble_plan("httpbin").to_dict()
-        # Check we've got the plan we expected
-        self.assertEqual(expected_plan, updated_plan)
-        # Check the service was started
-        service = self.harness.model.unit.get_container("httpbin").get_service("httpbin")
-        self.assertTrue(service.is_running())
-        # Ensure we set an ActiveStatus with no message
-        self.assertEqual(self.harness.model.unit.status, ActiveStatus())
 
-    def test_config_changed_valid_can_connect(self):
-        # Ensure the simulated Pebble API is reachable
-        self.harness.set_can_connect("httpbin", True)
-        # Trigger a config-changed event with an updated value
-        self.harness.update_config({"log-level": "debug"})
-        # Get the plan now we've run PebbleReady
-        updated_plan = self.harness.get_container_pebble_plan("httpbin").to_dict()
-        updated_env = updated_plan["services"]["httpbin"]["environment"]
-        # Check the config change was effective
-        self.assertEqual(updated_env, {"GUNICORN_CMD_ARGS": "--log-level debug"})
-        self.assertEqual(self.harness.model.unit.status, ActiveStatus())
+    assert harness.charm._login_ui_layer.to_dict() == expected_layer
 
-    def test_config_changed_valid_cannot_connect(self):
-        # Trigger a config-changed event with an updated value
-        self.harness.update_config({"log-level": "debug"})
-        # Check the charm is in WaitingStatus
-        self.assertIsInstance(self.harness.model.unit.status, WaitingStatus)
 
-    def test_config_changed_invalid(self):
-        # Ensure the simulated Pebble API is reachable
-        self.harness.set_can_connect("httpbin", True)
-        # Trigger a config-changed event with an updated value
-        self.harness.update_config({"log-level": "foobar"})
-        # Check the charm is in BlockedStatus
-        self.assertIsInstance(self.harness.model.unit.status, BlockedStatus)
+#finish test
+def test_fetch_endpoint_with_ingress_relation_data(harness) -> None:
+    harness.set_can_connect(CONTAINER_NAME, True)
+
+    setup_ingress_relation(harness, "public")
+
+    expected_data = "http://public:80/testing-identity-platform-login-ui"
+
+    assert harness.charm._fetch_endpoint() == expected_data
+
+
+#finish test
+def test_fetch_endpoint_without_ingress_relation_data(harness) -> None:
+    harness.set_can_connect(CONTAINER_NAME, True)
+
+    expected_data = "identity-platform-login-ui-operator.testing.svc.cluster.local:8080"
+
+    assert harness.charm._fetch_endpoint() == expected_data
