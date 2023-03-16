@@ -1,25 +1,44 @@
-<!--
-Avoid using this README file for information that is maintained or published elsewhere, e.g.:
+# Identity Platform Login UI Operator
 
-* metadata.yaml > published on Charmhub
-* documentation > published on (or linked to from) Charmhub
-* detailed contribution guide > documentation or CONTRIBUTING.md
+## Description
 
-Use links instead.
--->
+This repository hosts the Kubernetes Python Operator for Identity Platform Login UI.
+For more details, visit https://github.com/canonical/identity-platform-login-ui
 
-# kratos-ui
+## Usage
 
-This is a UI for the Ory Kratos identity server. It was based on the [kratos-selfservice-ui-react-nextjs](https://github.com/ory/kratos-selfservice-ui-react-nextjs/).
+The Identity Platform Login UI Operator may be deployed using with the following commands:
 
-## Other resources
+```console
+git clone https://github.com/canonical/identity-platform-login-ui-operator
+cd identity-platform-login-ui-operator
+charmcraft pack
+juju deploy ./identity-platform-login-ui_ubuntu-*.charm --resource oci-image=$(yq eval '.resources.login-ui-image.upstream-source' metadata.yaml)
+```
 
-<!-- If your charm is documented somewhere else other than Charmhub, provide a link separately. -->
+## Relations
 
-- [Read more](https://example.com)
+### Ingress
 
-- [Contributing](CONTRIBUTING.md) <!-- or link to other contribution documentation -->
+The Identity Platform Login UI Operator offers integration with the [traefik-k8s-operator](https://github.com/canonical/traefik-k8s-operator) for ingress.
 
-- See the [Juju SDK documentation](https://juju.is/docs/sdk) for more information about developing and improving charms.
+If you have a traefik deployed you can provide ingress with the following command:
+```console
+juju relate traefik-admin identity-platform-login-ui-operator:ingress
+```
 
-TEST PUSH TEST PUSH
+## OCI Images
+
+The image used by this charm is hosted on [Github](https://github.com/canonical/identity-platform-login-ui/pkgs/container/identity-platform-login-ui) and maintained by [bencekov](https://github.com/bencekov).
+
+### Security
+Security issues in IAM stack can be reported through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). Please do not file GitHub issues about security issues.
+
+## Contributing
+
+Please see the [Juju SDK docs](https://juju.is/docs/sdk) for guidelines on enhancements to this charm following best practice guidelines, and [CONTRIBUTING.md](https://github.com/canonical/identity-platform-login-ui-operator) for developer guidance.
+
+
+## License
+
+The Identity Platform Login UI is free software, distributed under the Apache Software License, version 2.0. See [LICENSE](https://github.com/canonical/kratos-operator/blob/main/LICENSE) for more information.
