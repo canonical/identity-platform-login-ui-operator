@@ -14,11 +14,8 @@ from charms.traefik_k8s.v1.ingress import (
 )
 from ops.charm import CharmBase, ConfigChangedEvent, HookEvent, WorkloadEvent
 from ops.main import main
-from ops.model import (ActiveStatus,
-                       BlockedStatus,
-                       MaintenanceStatus,
-                       ModelError,
-                       WaitingStatus)
+from ops.model import (ActiveStatus, BlockedStatus, MaintenanceStatus,
+                       ModelError, WaitingStatus)
 from ops.pebble import ChangeError, Layer
 
 logger = logging.getLogger(__name__)
@@ -44,10 +41,8 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
         self.framework.observe(self.on.login_ui_pebble_ready,
                                self._on_login_ui_pebble_ready)
-        self.framework.observe(self.on.config_changed,
-                               self._on_config_changed)
-        self.framework.observe(self.ingress.on.ready,
-                               self._on_ingress_ready)
+        self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.ingress.on.ready, self._on_ingress_ready)
         self.framework.observe(self.ingress.on.revoked,
                                self._on_ingress_revoked)
 
@@ -62,20 +57,25 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
     def _handle_status_update_config(self, event: HookEvent) -> None:
         if not self._container.can_connect():
             event.defer()
-            logger.info("Cannot connect to Login_UI container. Deferring the event.")  # noqa:E501
-            self.unit.status = WaitingStatus("Waiting to connect to Login_UI container")  # noqa:E501
+            logger.info("""Cannot connect to Login_UI container.
+ Deferring the event.""")
+            self.unit.status = WaitingStatus(
+                "Waiting to connect to Login_UI container"
+            )  # noqa:E501
             return
 
         self.unit.status = MaintenanceStatus("Configuration in progress")
 
-        self._container.add_layer(self._container_name,
-                                  self._login_ui_layer, combine=True)
+        self._container.add_layer(self._container_name, self._login_ui_layer,
+                                  combine=True)
         logger.info("Pebble plan updated with new configuration, replanning")
         try:
             self._container.replan()
         except ChangeError as err:
             logger.error(str(err))
-            self.unit.status = BlockedStatus("Failed to replan, please consult the logs")  # noqa:E501
+            self.unit.status = BlockedStatus(
+                "Failed to replan, please consult the logs"
+            )  # noqa:E501
             return
 
         self.unit.status = ActiveStatus()

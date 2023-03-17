@@ -23,7 +23,9 @@ def setup_ingress_relation(harness):
         "traefik",
         {
             "ingress": json.dumps(
-                {"url": f"http://ingress:80/{harness.model.name}-identity-platform-login-ui"}  # noqa:E501
+                {
+                    "url": f"http://ingress:80/{harness.model.name}-identity-platform-login-ui"
+                }
             )
         },
     )
@@ -57,7 +59,9 @@ def test_install_can_not_connect(harness):
     harness.set_can_connect(CONTAINER_NAME, False)
     harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
 
-    assert harness.charm.unit.status == WaitingStatus("Waiting to connect to Login_UI container")  # noqa:E501
+    assert harness.charm.unit.status == WaitingStatus(
+        "Waiting to connect to Login_UI container"
+    )  # noqa:E501
 
 
 def test_layer_updated(harness) -> None:
@@ -107,6 +111,8 @@ def test_fetch_endpoint_without_ingress_relation_data(harness) -> None:
     """Test _fetch_endpoint function without ingress."""
     harness.set_can_connect(CONTAINER_NAME, True)
 
-    expected_data = "identity-platform-login-ui-operator.testing.svc.cluster.local:8080"  # noqa:E501
+    expected_data = (
+        "identity-platform-login-ui-operator.testing.svc.cluster.local:8080"
+    )
 
     assert harness.charm._fetch_endpoint() == expected_data
