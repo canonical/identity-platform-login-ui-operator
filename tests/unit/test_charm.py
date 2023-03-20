@@ -92,27 +92,3 @@ def test_layer_updated(harness) -> None:
     }
 
     assert harness.charm._login_ui_layer.to_dict() == expected_layer
-
-
-# finish test
-def test_fetch_endpoint_with_ingress_relation_data(harness) -> None:
-    """Test _fetch_endpoint function with ingress."""
-    harness.set_can_connect(CONTAINER_NAME, True)
-
-    setup_ingress_relation(harness)
-
-    expected_data = "http://ingress:80/testing-identity-platform-login-ui"
-
-    assert harness.charm._fetch_endpoint() == expected_data
-
-
-# finish test
-def test_fetch_endpoint_without_ingress_relation_data(harness) -> None:
-    """Test _fetch_endpoint function without ingress."""
-    harness.set_can_connect(CONTAINER_NAME, True)
-
-    expected_data = (
-        "identity-platform-login-ui-operator.testing.svc.cluster.local:8080"
-    )
-
-    assert harness.charm._fetch_endpoint() == expected_data

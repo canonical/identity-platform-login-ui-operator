@@ -14,9 +14,11 @@ from charms.traefik_k8s.v1.ingress import (
 )
 from ops.charm import CharmBase, ConfigChangedEvent, HookEvent, WorkloadEvent
 from ops.main import main
-from ops.model import (ActiveStatus, BlockedStatus, MaintenanceStatus,
-                       ModelError, WaitingStatus)
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, ModelError, WaitingStatus
 from ops.pebble import ChangeError, Layer
+
+APPLICATION_PORT = "8080"
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,13 +31,12 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         super().__init__(*args)
         self._container_name = "login_ui"
         self._container = self.unit.get_container(self._container_name)
-        self._application_port = "8080"
 
-        self.unit.open_port("tcp", int(self._application_port))
+        self.unit.open_port("tcp", int(APPLICATION_PORT))
         self.ingress = IngressPerAppRequirer(
             self,
             relation_name="ingress",
-            port=self._application_port,
+            port=APPLICATION_PORT,
             strip_prefix=True,
         )
 
@@ -61,7 +62,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
  Deferring the event.""")
             self.unit.status = WaitingStatus(
                 "Waiting to connect to Login_UI container"
-            )  # noqa:E501
+            )
             return
 
         self.unit.status = MaintenanceStatus("Configuration in progress")
@@ -75,7 +76,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             logger.error(str(err))
             self.unit.status = BlockedStatus(
                 "Failed to replan, please consult the logs"
-            )  # noqa:E501
+            )
             return
 
         self.unit.status = ActiveStatus()
@@ -89,7 +90,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             logger.info("This app no longer has ingress")
 
     def _fetch_endpoint(self) -> str:
-        port = self._application_port
+        port = APPLICATION_PORT
         endpoint = (
             self.ingress.url
             if self.ingress.is_ready()
@@ -104,7 +105,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         # Define an initial Pebble layer configuration
         pebble_layer = {
             "summary": "login_ui layer",
-            "description": "pebble config layer for identity platform login ui",  # noqa:E501
+            "description": "pebble config layer for identity platform login ui",
             "services": {
                 self._container_name: {
                     "override": "replace",
@@ -114,7 +115,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                     "environment": {
                         "HYDRA_ADMIN_URL": self.config.get("hydra_url"),
                         "KRATOS_PUBLIC_URL": self.config.get("kratos_url"),
-                        "PORT": self._application_port,
+                        "PORT": APPLICATION_PORT,
                     },
                 }
             },
