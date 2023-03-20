@@ -2,9 +2,8 @@
 # See LICENSE file for licensing details.
 
 """Unit test configuration."""
-import pytest
 import ops.testing
-
+import pytest
 
 from charm import IdentityPlatformLoginUiOperatorCharm
 
