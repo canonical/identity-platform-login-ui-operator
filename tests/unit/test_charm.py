@@ -9,7 +9,7 @@ import json
 from ops.model import ActiveStatus, WaitingStatus
 
 CONTAINER_NAME = "login_ui"
-TEST_PORT = "55555"
+TEST_PORT = "8080"
 TEST_HYDRA_URL = "http://hydra:port"
 TEST_KRATOS_URL = "http://kratos:port"
 
@@ -18,13 +18,14 @@ def setup_ingress_relation(harness):
     """Set up ingress relation."""
     relation_id = harness.add_relation("ingress", "traefik")
     harness.add_relation_unit(relation_id, "traefik/0")
+    url = f"http://ingress:80/{harness.model.name}-identity-platform-login-ui"
     harness.update_relation_data(
         relation_id,
         "traefik",
         {
             "ingress": json.dumps(
                 {
-                    "url": f"http://ingress:80/{harness.model.name}-identity-platform-login-ui"
+                    "url": url
                 }
             )
         },
@@ -61,7 +62,7 @@ def test_install_can_not_connect(harness):
 
     assert harness.charm.unit.status == WaitingStatus(
         "Waiting to connect to Login_UI container"
-    )  # noqa:E501
+    )
 
 
 def test_layer_updated(harness) -> None:
@@ -71,7 +72,6 @@ def test_layer_updated(harness) -> None:
 
     harness.update_config({"hydra_url": TEST_HYDRA_URL})
     harness.update_config({"kratos_url": TEST_KRATOS_URL})
-    harness.update_config({"port": TEST_PORT})
 
     expected_layer = {
         "summary": "login_ui layer",

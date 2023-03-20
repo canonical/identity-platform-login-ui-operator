@@ -29,7 +29,7 @@ juju relate traefik-admin identity-platform-login-ui-operator:ingress
 
 ## OCI Images
 
-The image used by this charm is hosted on [Github](https://github.com/canonical/identity-platform-login-ui/pkgs/container/identity-platform-login-ui) and maintained by [bencekov](https://github.com/bencekov).
+The image used by this charm is hosted on [Github container registry](ghcr.io/canonical/identity-platform-login-ui) and maintained by Canonical Identity Team.
 
 ### Security
 Security issues in IAM stack can be reported through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). Please do not file GitHub issues about security issues.

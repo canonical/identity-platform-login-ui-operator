@@ -4,8 +4,11 @@
 """Unit test configuration."""
 import pytest
 from ops.testing import Harness
+import ops.testing
 
 from charm import IdentityPlatformLoginUiOperatorCharm
+
+ops.testing.SIMULATE_CAN_CONNECT = True
 
 
 @pytest.fixture()

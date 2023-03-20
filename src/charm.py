@@ -29,13 +29,13 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         super().__init__(*args)
         self._container_name = "login_ui"
         self._container = self.unit.get_container(self._container_name)
-        """New vars should come here"""
+        self._application_port = "8080"
 
-        self.unit.open_port("tcp", int(self.config.get("port")))
+        self.unit.open_port("tcp", int(self._application_port))
         self.ingress = IngressPerAppRequirer(
             self,
             relation_name="ingress",
-            port=self.config.get("port"),
+            port=self._application_port,
             strip_prefix=True,
         )
 
@@ -89,7 +89,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             logger.info("This app no longer has ingress")
 
     def _fetch_endpoint(self) -> str:
-        port = self.config.get("port")
+        port = self._application_port
         endpoint = (
             self.ingress.url
             if self.ingress.is_ready()
@@ -114,10 +114,9 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                     "environment": {
                         "HYDRA_ADMIN_URL": self.config.get("hydra_url"),
                         "KRATOS_PUBLIC_URL": self.config.get("kratos_url"),
-                        "PORT": self.config.get("port"),
+                        "PORT": self._application_port,
                     },
                 }
-                # version, health and readiness checks will come here, once they're supported in login_ui  # noqa:E501
             },
         }
         return Layer(pebble_layer)

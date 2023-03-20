@@ -42,8 +42,10 @@ jobs:
         with:
           title: '(Automated) Update Charm Libs'
           body: 'Update charm libs'
-          commit-message: 'Update charm libs'
-          signoff: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update charm libraries"
+          committer: "Github Actions <github-actions@github.com>"
+          author: "Github Actions <github-actions@github.com>"
           delete-branch: true
           branch: 'automated-update-charm-libs'
 

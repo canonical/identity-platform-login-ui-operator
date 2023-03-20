@@ -20,7 +20,3 @@ options:
     description: Hydra API URL. In the final version the operator uses the interface relation to get Hydra API URL. Config value is a fallback.
     type: string
     default: "DEFAULT-HYDRA-PLACEHOLDER"
-  port:
-    description: The port where the Identity Platform Login UI is Accessible
-    type: string
-    default: "8080"
