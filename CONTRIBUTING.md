@@ -6,7 +6,7 @@ This document explains the processes and practices recommended for contributing 
 this operator.
 
 - Generally, before developing bugs or enhancements to this charm, you should [open an issue
-  ](https://github.com/canonical/hydra-operator/issues) explaining your use case.
+  ](https://github.com/canonical/identity-platform-login-ui-operator/issues) explaining your use case.
 - If you would like to chat with us about charm development, you can reach
   us at [Canonical Mattermost public channel](https://chat.charmhub.io/charmhub/channels/charm-dev)
   or [Discourse](https://discourse.charmhub.io/).
@@ -54,9 +54,9 @@ juju add-model dev
 # Enable DEBUG logging
 juju model-config logging-config="<root>=INFO;unit=DEBUG"
 # Deploy identity-platform-login-ui charm
-juju deploy ./identity-platform-login-ui_ubuntu-*.charm --resource oci-image=$(yq eval '.resources.oci-image.upstream-source' metadata.yaml)
+juju deploy ./identity-platform-login-ui-operator_ubuntu*.charm --resource oci-image=$(yq eval '.resources.oci-image.upstream-source' metadata.yaml) --trust
 ```
 
 ## Canonical Contributor Agreement
 
-Canonical welcomes contributions to Charmed Ory Hydra. Please check out our [contributor agreement](https://ubuntu.com/legal/contributors) if you're interested in contributing to the solution.
+Canonical welcomes contributions to Charmed Identity Platform Login UI. Please check out our [contributor agreement](https://ubuntu.com/legal/contributors) if you're interested in contributing to the solution.

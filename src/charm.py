@@ -50,19 +50,16 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
     def _on_login_ui_pebble_ready(self, event: WorkloadEvent) -> None:
         """Define and start a workload using the Pebble API."""
-        self._handle_status_update_config(event)
+        self._update_pebble_layer(event)
 
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:
         """Handle changed configuration."""
-        self._handle_status_update_config(event)
+        self._update_pebble_layer(event)
 
-    def _handle_status_update_config(self, event: HookEvent) -> None:
+    def _update_pebble_layer(self, event: HookEvent) -> None:
         if not self._container.can_connect():
             event.defer()
-            logger.info(
-                """Cannot connect to Login_UI container.
- Deferring the event."""
-            )
+            logger.info("Cannot connect to Login_UI container. Deferring the event.")
             self.unit.status = WaitingStatus("Waiting to connect to Login_UI container")
             return
 
@@ -89,7 +86,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
     @property
     def _login_ui_layer(self) -> Layer:
-        # Define an initial Pebble layer configuration
+        # Define Pebble layer configuration
         pebble_layer = {
             "summary": "login_ui layer",
             "description": "pebble config layer for identity platform login ui",
