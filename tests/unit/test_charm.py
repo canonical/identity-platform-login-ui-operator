@@ -14,8 +14,9 @@ TEST_HYDRA_URL = "http://hydra:port"
 TEST_KRATOS_URL = "http://kratos:port"
 
 
-def setup_ingress_relation(harness):
+def setup_ingress_relation(harness) -> int:
     """Set up ingress relation."""
+    harness.set_leader(True)
     relation_id = harness.add_relation("ingress", "traefik")
     harness.add_relation_unit(relation_id, "traefik/0")
     url = f"http://ingress:80/{harness.model.name}-identity-platform-login-ui"
@@ -27,7 +28,7 @@ def setup_ingress_relation(harness):
     return relation_id
 
 
-def test_not_leader(harness):
+def test_not_leader(harness) -> None:
     """Test with unit not being leader."""
     harness.set_leader(False)
 
@@ -41,16 +42,18 @@ def test_not_leader(harness):
     ) in harness._get_backend_calls()
 
 
-def test_install_can_connect(harness):
+def test_install_can_connect(harness) -> None:
     """Test installation with connection."""
+    harness.set_leader(True)
     harness.set_can_connect(CONTAINER_NAME, True)
     harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
 
     assert harness.charm.unit.status == ActiveStatus()
 
 
-def test_install_can_not_connect(harness):
+def test_install_can_not_connect(harness) -> None:
     """Test installation with connection."""
+    harness.set_leader(True)
     harness.set_can_connect(CONTAINER_NAME, False)
     harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
 
@@ -59,11 +62,11 @@ def test_install_can_not_connect(harness):
 
 def test_layer_updated(harness) -> None:
     """Test Pebble Layers after updates."""
+    harness.set_leader(True)
     harness.set_can_connect(CONTAINER_NAME, True)
     harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
 
-    harness.update_config({"hydra_url": TEST_HYDRA_URL})
-    harness.update_config({"kratos_url": TEST_KRATOS_URL})
+    harness.update_config({"hydra_url": TEST_HYDRA_URL, "kratos_url": TEST_KRATOS_URL})
 
     expected_layer = {
         "summary": "login_ui layer",

@@ -15,7 +15,6 @@ def harness(mocked_kubernetes_service_patcher):
     """Initialize harness with Charm."""
     harness = ops.testing.Harness(IdentityPlatformLoginUiOperatorCharm)
     harness.set_model_name("testing")
-    harness.set_leader(True)
     harness.begin()
     return harness
 
