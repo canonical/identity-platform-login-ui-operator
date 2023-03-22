@@ -8,7 +8,7 @@ import json
 
 from ops.model import ActiveStatus, WaitingStatus
 
-CONTAINER_NAME = "login_ui"
+CONTAINER_NAME = "login-ui"
 TEST_PORT = "8080"
 TEST_HYDRA_URL = "http://hydra:port"
 TEST_KRATOS_URL = "http://kratos:port"
@@ -80,7 +80,7 @@ def test_layer_updated(harness) -> None:
             CONTAINER_NAME: {
                 "override": "replace",
                 "summary": "identity platform login ui",
-                "command": "/id/identity_platform_login_ui",
+                "command": "identity_platform_login_ui",
                 "startup": "enabled",
                 "environment": {
                     "HYDRA_ADMIN_URL": TEST_HYDRA_URL,
