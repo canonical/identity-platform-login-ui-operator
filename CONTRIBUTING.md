@@ -54,7 +54,7 @@ juju add-model dev
 # Enable DEBUG logging
 juju model-config logging-config="<root>=INFO;unit=DEBUG"
 # Deploy identity-platform-login-ui charm
-juju deploy ./identity-platform-login-ui_ubuntu-*.charm --resource oci-image=$(yq eval '.resources.login-ui-image.upstream-source' metadata.yaml)
+juju deploy ./identity-platform-login-ui_ubuntu-*.charm --resource oci-image=$(yq eval '.resources.oci-image.upstream-source' metadata.yaml)
 ```
 
 ## Canonical Contributor Agreement
