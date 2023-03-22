@@ -15,7 +15,7 @@ from charms.traefik_k8s.v1.ingress import (
 )
 from ops.charm import CharmBase, ConfigChangedEvent, HookEvent, WorkloadEvent
 from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, ModelError, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import ChangeError, Layer
 
 APPLICATION_PORT = "8080"
@@ -87,17 +87,6 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         if self.unit.is_leader():
             logger.info("This app no longer has ingress")
 
-    def _fetch_endpoint(self) -> str:
-        port = APPLICATION_PORT
-        endpoint = (
-            self.ingress.url
-            if self.ingress.is_ready()
-            else f"{self.app.name}.{self.model.name}.svc.cluster.local:{port}",
-        )
-
-        logger.info(f"Sending endpoints info: {endpoint[0]}")
-        return endpoint[0]
-
     @property
     def _login_ui_layer(self) -> Layer:
         # Define an initial Pebble layer configuration
@@ -119,13 +108,6 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             },
         }
         return Layer(pebble_layer)
-
-    def _service_is_created(self) -> bool:
-        try:
-            self._container.get_service(self._container_name)
-        except (ModelError, RuntimeError):
-            return False
-        return True
 
 
 if __name__ == "__main__":  # pragma: nocover

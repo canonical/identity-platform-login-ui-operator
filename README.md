@@ -3,21 +3,29 @@
 ## Description
 
 This repository hosts the Kubernetes Python Operator for Identity Platform Login UI.
-For more details, visit https://github.com/canonical/identity-platform-login-ui
+For more details, visit [Identity Platform Login UI](https://github.com/canonical/identity-platform-login-ui).
 
 ## Usage
 
 The Identity Platform Login UI Operator may be deployed using with the following commands:
 
 ```console
-git clone https://github.com/canonical/identity-platform-login-ui-operator
-cd identity-platform-login-ui-operator
-charmcraft pack
-juju deploy ./identity-platform-login-ui_ubuntu-*.charm --resource oci-image=$(yq eval '.resources.login-ui-image.upstream-source' metadata.yaml)
+juju deploy identity-platform-login-ui-operator
 ```
 
-## Relations
+## Interacting with Kratos and Hydra
 
+To set the Ory Kratos endpoint to the UI server, do:
+
+```console
+juju config identity-platform-login-ui-operator kratos_url={kratos_url:port}
+```
+
+To set the Ory Hydra endpoint to the UI server, do:
+
+```console
+juju config identity-platform-login-ui-operator hydra_url={hydra_url:port}
+```
 ### Ingress
 
 The Identity Platform Login UI Operator offers integration with the [traefik-k8s-operator](https://github.com/canonical/traefik-k8s-operator) for ingress.
