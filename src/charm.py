@@ -6,7 +6,7 @@
 
 """A Juju charm for Identity Platform Login UI."""
 import logging
-
+from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from charms.traefik_k8s.v1.ingress import (
     IngressPerAppReadyEvent,
     IngressPerAppRequirer,
@@ -112,7 +112,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                 self._container_name: {
                     "override": "replace",
                     "summary": "identity platform login ui",
-                    "command": "/id/identity_platform_login_ui",
+                    "command": "identity_platform_login_ui",
                     "startup": "enabled",
                     "environment": {
                         "HYDRA_ADMIN_URL": self.config.get("hydra_url"),

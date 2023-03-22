@@ -11,7 +11,7 @@ description: |
   Operator for Identity platform UI backend and proxy
 
 containers:
-  login_ui:
+  login-ui:
     resource: oci-image
 
 # This field populates the Resources tab on Charmhub.
