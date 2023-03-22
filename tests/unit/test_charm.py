@@ -22,13 +22,7 @@ def setup_ingress_relation(harness):
     harness.update_relation_data(
         relation_id,
         "traefik",
-        {
-            "ingress": json.dumps(
-                {
-                    "url": url
-                }
-            )
-        },
+        {"ingress": json.dumps({"url": url})},
     )
     return relation_id
 
@@ -60,9 +54,7 @@ def test_install_can_not_connect(harness):
     harness.set_can_connect(CONTAINER_NAME, False)
     harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
 
-    assert harness.charm.unit.status == WaitingStatus(
-        "Waiting to connect to Login_UI container"
-    )
+    assert harness.charm.unit.status == WaitingStatus("Waiting to connect to Login_UI container")
 
 
 def test_layer_updated(harness) -> None:

@@ -6,6 +6,7 @@
 
 """A Juju charm for Identity Platform Login UI."""
 import logging
+
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from charms.traefik_k8s.v1.ingress import (
     IngressPerAppReadyEvent,
@@ -42,12 +43,10 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             strip_prefix=True,
         )
 
-        self.framework.observe(self.on.login_ui_pebble_ready,
-                               self._on_login_ui_pebble_ready)
+        self.framework.observe(self.on.login_ui_pebble_ready, self._on_login_ui_pebble_ready)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.ingress.on.ready, self._on_ingress_ready)
-        self.framework.observe(self.ingress.on.revoked,
-                               self._on_ingress_revoked)
+        self.framework.observe(self.ingress.on.revoked, self._on_ingress_revoked)
 
     def _on_login_ui_pebble_ready(self, event: WorkloadEvent) -> None:
         """Define and start a workload using the Pebble API."""
@@ -60,25 +59,22 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
     def _handle_status_update_config(self, event: HookEvent) -> None:
         if not self._container.can_connect():
             event.defer()
-            logger.info("""Cannot connect to Login_UI container.
- Deferring the event.""")
-            self.unit.status = WaitingStatus(
-                "Waiting to connect to Login_UI container"
+            logger.info(
+                """Cannot connect to Login_UI container.
+ Deferring the event."""
             )
+            self.unit.status = WaitingStatus("Waiting to connect to Login_UI container")
             return
 
         self.unit.status = MaintenanceStatus("Configuration in progress")
 
-        self._container.add_layer(self._container_name, self._login_ui_layer,
-                                  combine=True)
+        self._container.add_layer(self._container_name, self._login_ui_layer, combine=True)
         logger.info("Pebble plan updated with new configuration, replanning")
         try:
             self._container.replan()
         except ChangeError as err:
             logger.error(str(err))
-            self.unit.status = BlockedStatus(
-                "Failed to replan, please consult the logs"
-            )
+            self.unit.status = BlockedStatus("Failed to replan, please consult the logs")
             return
 
         self.unit.status = ActiveStatus()
