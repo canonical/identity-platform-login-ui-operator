@@ -29,10 +29,12 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
     def __init__(self, *args):
         """Initialize Charm."""
         super().__init__(*args)
-        self._container_name = "login_ui"
+        self._container_name = "login-ui"
         self._container = self.unit.get_container(self._container_name)
 
-        self.unit.open_port("tcp", int(APPLICATION_PORT))
+        self.service_patcher = KubernetesServicePatch(
+            self, [("identity-platform-login-ui", int(APPLICATION_PORT))]
+        )
         self.ingress = IngressPerAppRequirer(
             self,
             relation_name="ingress",
