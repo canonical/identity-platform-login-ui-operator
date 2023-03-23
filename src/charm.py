@@ -1,88 +1,111 @@
 #!/usr/bin/env python3
-# Copyright 2023 nikos
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 #
 # Learn more at: https://juju.is/docs/sdk
 
+"""A Juju charm for Identity Platform Login UI."""
 import logging
 
-from charms.traefik_k8s.v1.ingress import (
-    IngressPerAppRequirer,
-)
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
-from ops.charm import CharmBase
+from charms.traefik_k8s.v1.ingress import (
+    IngressPerAppReadyEvent,
+    IngressPerAppRequirer,
+    IngressPerAppRevokedEvent,
+)
+from ops.charm import CharmBase, ConfigChangedEvent, HookEvent, WorkloadEvent
 from ops.main import main
-from ops.model import ActiveStatus, MaintenanceStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.pebble import ChangeError, Layer
 
-# Log messages can be retrieved using juju debug-log
+APPLICATION_PORT = "8080"
+
+
 logger = logging.getLogger(__name__)
 
-VALID_LOG_LEVELS = ["info", "debug", "warning", "error", "critical"]
 
-
-class KratosUiOperatorCharm(CharmBase):
-    """Charm the service."""
+class IdentityPlatformLoginUiOperatorCharm(CharmBase):
+    """Charmed Identity Platform Login UI."""
 
     def __init__(self, *args):
+        """Initialize Charm."""
         super().__init__(*args)
-        self._container_name = "kratos-ui"
+        self._container_name = "login-ui"
+        self._container = self.unit.get_container(self._container_name)
+
         self.service_patcher = KubernetesServicePatch(
-            self, [("api", 3000)]
+            self, [("identity-platform-login-ui", int(APPLICATION_PORT))]
         )
         self.ingress = IngressPerAppRequirer(
             self,
             relation_name="ingress",
-            port=3000,
+            port=APPLICATION_PORT,
             strip_prefix=True,
         )
 
-        self.framework.observe(self.on.kratos_ui_pebble_ready, self._on_kratos_ui_pebble_ready)
+        self.framework.observe(self.on.login_ui_pebble_ready, self._on_login_ui_pebble_ready)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.ingress.on.ready, self._on_ingress_ready)
+        self.framework.observe(self.ingress.on.revoked, self._on_ingress_revoked)
 
-    @property
-    def _container(self):
-        return self.unit.get_container(self._container_name)
+    def _on_login_ui_pebble_ready(self, event: WorkloadEvent) -> None:
+        """Define and start a workload using the Pebble API."""
+        self._update_pebble_layer(event)
 
-    def _on_kratos_ui_pebble_ready(self, event):
-        """Define and start a workload using the Pebble API.
-        """
-        self._container.add_layer("kratos_ui", self._pebble_layer, combine=True)
-        self._container.replan()
+    def _on_config_changed(self, event: ConfigChangedEvent) -> None:
+        """Handle changed configuration."""
+        self._update_pebble_layer(event)
+
+    def _update_pebble_layer(self, event: HookEvent) -> None:
+        if not self._container.can_connect():
+            event.defer()
+            logger.info("Cannot connect to Login_UI container. Deferring the event.")
+            self.unit.status = WaitingStatus("Waiting to connect to Login_UI container")
+            return
+
+        self.unit.status = MaintenanceStatus("Configuration in progress")
+
+        self._container.add_layer(self._container_name, self._login_ui_layer, combine=True)
+        logger.info("Pebble plan updated with new configuration, replanning")
+        try:
+            self._container.replan()
+        except ChangeError as err:
+            logger.error(str(err))
+            self.unit.status = BlockedStatus("Failed to replan, please consult the logs")
+            return
+
         self.unit.status = ActiveStatus()
 
-    def _on_config_changed(self, event):
-        """Handle changed configuration.
-        """
-        # Fetch the new config value
-        log_level = self.model.config["log-level"].lower()
-
-        self.unit.status = MaintenanceStatus("Applying configuration")
-        self._on_kratos_ui_pebble_ready(None)
-
-    @property
-    def _pebble_layer(self):
-        """Return a dictionary representing a Pebble layer."""
-        return {
-            "summary": "kratos ui layer",
-            "description": "pebble config layer for kratos_ui",
-            "services": {
-                "kratos_ui": {
-                    "override": "replace",
-                    "summary": "kratos ui",
-                    "command": "npm run dev",
-                    "startup": "enabled",
-                    "environment": {
-                        "ORY_SDK_URL": self.config["sdk_url"]
-                    },
-                },
-            },
-        }
-
-    def _on_ingress_ready(self, event) -> None:
+    def _on_ingress_ready(self, event: IngressPerAppReadyEvent) -> None:
         if self.unit.is_leader():
             logger.info("This app's public ingress URL: %s", event.url)
 
+    def _on_ingress_revoked(self, event: IngressPerAppRevokedEvent) -> None:
+        if self.unit.is_leader():
+            logger.info("This app no longer has ingress")
+
+    @property
+    def _login_ui_layer(self) -> Layer:
+        # Define Pebble layer configuration
+        pebble_layer = {
+            "summary": "login_ui layer",
+            "description": "pebble config layer for identity platform login ui",
+            "services": {
+                self._container_name: {
+                    "override": "replace",
+                    "summary": "identity platform login ui",
+                    "command": "identity_platform_login_ui",
+                    "startup": "enabled",
+                    "environment": {
+                        "HYDRA_ADMIN_URL": self.config.get("hydra_url"),
+                        "KRATOS_PUBLIC_URL": self.config.get("kratos_url"),
+                        "PORT": APPLICATION_PORT,
+                    },
+                }
+            },
+        }
+        return Layer(pebble_layer)
+
 
 if __name__ == "__main__":  # pragma: nocover
-    main(KratosUiOperatorCharm)
+    main(IdentityPlatformLoginUiOperatorCharm)

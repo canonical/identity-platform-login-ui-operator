@@ -1,74 +1,89 @@
-# Copyright 2023 nikos
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 #
 # Learn more about testing at: https://juju.is/docs/sdk/testing
 
-import unittest
+"""Test functions for unit testing Identity Platform Login UI Operator."""
+import json
 
-import ops.testing
-from charm import KratosUiOperatorCharm
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
-from ops.testing import Harness
+from ops.model import ActiveStatus, WaitingStatus
+
+CONTAINER_NAME = "login-ui"
+TEST_PORT = "8080"
+TEST_HYDRA_URL = "http://hydra:port"
+TEST_KRATOS_URL = "http://kratos:port"
 
 
-class TestCharm(unittest.TestCase):
-    def setUp(self):
-        # Enable more accurate simulation of container networking.
-        # For more information, see https://juju.is/docs/sdk/testing#heading--simulate-can-connect
-        ops.testing.SIMULATE_CAN_CONNECT = True
-        self.addCleanup(setattr, ops.testing, "SIMULATE_CAN_CONNECT", False)
+def setup_ingress_relation(harness) -> int:
+    """Set up ingress relation."""
+    harness.set_leader(True)
+    relation_id = harness.add_relation("ingress", "traefik")
+    harness.add_relation_unit(relation_id, "traefik/0")
+    url = f"http://ingress:80/{harness.model.name}-identity-platform-login-ui"
+    harness.update_relation_data(
+        relation_id,
+        "traefik",
+        {"ingress": json.dumps({"url": url})},
+    )
+    return relation_id
 
-        self.harness = Harness(KratosUiOperatorCharm)
-        self.addCleanup(self.harness.cleanup)
-        self.harness.begin()
 
-    def test_httpbin_pebble_ready(self):
-        # Expected plan after Pebble ready with default config
-        expected_plan = {
-            "services": {
-                "httpbin": {
-                    "override": "replace",
-                    "summary": "httpbin",
-                    "command": "gunicorn -b 0.0.0.0:80 httpbin:app -k gevent",
-                    "startup": "enabled",
-                    "environment": {"GUNICORN_CMD_ARGS": "--log-level info"},
-                }
-            },
-        }
-        # Simulate the container coming up and emission of pebble-ready event
-        self.harness.container_pebble_ready("httpbin")
-        # Get the plan now we've run PebbleReady
-        updated_plan = self.harness.get_container_pebble_plan("httpbin").to_dict()
-        # Check we've got the plan we expected
-        self.assertEqual(expected_plan, updated_plan)
-        # Check the service was started
-        service = self.harness.model.unit.get_container("httpbin").get_service("httpbin")
-        self.assertTrue(service.is_running())
-        # Ensure we set an ActiveStatus with no message
-        self.assertEqual(self.harness.model.unit.status, ActiveStatus())
+def test_not_leader(harness) -> None:
+    """Test with unit not being leader."""
+    harness.set_leader(False)
 
-    def test_config_changed_valid_can_connect(self):
-        # Ensure the simulated Pebble API is reachable
-        self.harness.set_can_connect("httpbin", True)
-        # Trigger a config-changed event with an updated value
-        self.harness.update_config({"log-level": "debug"})
-        # Get the plan now we've run PebbleReady
-        updated_plan = self.harness.get_container_pebble_plan("httpbin").to_dict()
-        updated_env = updated_plan["services"]["httpbin"]["environment"]
-        # Check the config change was effective
-        self.assertEqual(updated_env, {"GUNICORN_CMD_ARGS": "--log-level debug"})
-        self.assertEqual(self.harness.model.unit.status, ActiveStatus())
+    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
 
-    def test_config_changed_valid_cannot_connect(self):
-        # Trigger a config-changed event with an updated value
-        self.harness.update_config({"log-level": "debug"})
-        # Check the charm is in WaitingStatus
-        self.assertIsInstance(self.harness.model.unit.status, WaitingStatus)
+    assert (
+        "status_set",
+        "waiting",
+        "Waiting to connect to Login_UI container",
+        {"is_app": False},
+    ) in harness._get_backend_calls()
 
-    def test_config_changed_invalid(self):
-        # Ensure the simulated Pebble API is reachable
-        self.harness.set_can_connect("httpbin", True)
-        # Trigger a config-changed event with an updated value
-        self.harness.update_config({"log-level": "foobar"})
-        # Check the charm is in BlockedStatus
-        self.assertIsInstance(self.harness.model.unit.status, BlockedStatus)
+
+def test_install_can_connect(harness) -> None:
+    """Test installation with connection."""
+    harness.set_leader(True)
+    harness.set_can_connect(CONTAINER_NAME, True)
+    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
+
+    assert harness.charm.unit.status == ActiveStatus()
+
+
+def test_install_can_not_connect(harness) -> None:
+    """Test installation with connection."""
+    harness.set_leader(True)
+    harness.set_can_connect(CONTAINER_NAME, False)
+    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
+
+    assert harness.charm.unit.status == WaitingStatus("Waiting to connect to Login_UI container")
+
+
+def test_layer_updated(harness) -> None:
+    """Test Pebble Layers after updates."""
+    harness.set_leader(True)
+    harness.set_can_connect(CONTAINER_NAME, True)
+    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
+
+    harness.update_config({"hydra_url": TEST_HYDRA_URL, "kratos_url": TEST_KRATOS_URL})
+
+    expected_layer = {
+        "summary": "login_ui layer",
+        "description": "pebble config layer for identity platform login ui",
+        "services": {
+            CONTAINER_NAME: {
+                "override": "replace",
+                "summary": "identity platform login ui",
+                "command": "identity_platform_login_ui",
+                "startup": "enabled",
+                "environment": {
+                    "HYDRA_ADMIN_URL": TEST_HYDRA_URL,
+                    "KRATOS_PUBLIC_URL": TEST_KRATOS_URL,
+                    "PORT": TEST_PORT,
+                },
+            }
+        },
+    }
+
+    assert harness.charm._login_ui_layer.to_dict() == expected_layer

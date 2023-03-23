@@ -7,12 +7,12 @@ options:
   # An example config option to customise the log level of the workload
   log-level:
     description: |
-      Configures the log level of gunicorn.
-
       Acceptable values are: "info", "debug", "warning", "error" and "critical"
     default: "info"
     type: string
-  sdk_url:
-    description: Kratos public API url
+  kratos_url:
+    description: Kratos API URL. In the final version the operator uses the interface relation to get Kratos API URL. Config value is a fallback.
     type: string
-
+  hydra_url:
+    description: Hydra API URL. In the final version the operator uses the interface relation to get Hydra API URL. Config value is a fallback.
+    type: string
