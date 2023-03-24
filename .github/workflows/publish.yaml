@@ -59,3 +59,4 @@ jobs:
           credentials: ${{ secrets.CHARMCRAFT_CREDENTIALS }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           channel: ${{ steps.parse-inputs.outputs.destination_channel }}
+          resource-overrides: "ghcr.io/canonical/identity-platform-login-ui:latest,canonical/identity-platform-login-ui:latest"
