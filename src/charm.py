@@ -13,13 +13,14 @@ from charms.traefik_k8s.v1.ingress import (
     IngressPerAppRequirer,
     IngressPerAppRevokedEvent,
 )
-from ops.charm import CharmBase, ConfigChangedEvent, HookEvent, WorkloadEvent
+from charms.identity_platform_login_ui.v0.hydra_login_ui import HydraLoginUIProvider, HydraLoginUIRelationMissingError
+from ops.charm import CharmBase, ConfigChangedEvent, HookEvent, WorkloadEvent, RelationEvent
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import ChangeError, Layer
 
 APPLICATION_PORT = "8080"
-
+HYDRA_LOGIN_UI_RELATION_NAME = "endpoint-info"
 
 logger = logging.getLogger(__name__)
 
@@ -42,11 +43,15 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             port=APPLICATION_PORT,
             strip_prefix=True,
         )
+        self.hydra_login_ui_provider = HydraLoginUIProvider(self)
 
         self.framework.observe(self.on.login_ui_pebble_ready, self._on_login_ui_pebble_ready)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.ingress.on.ready, self._on_ingress_ready)
         self.framework.observe(self.ingress.on.revoked, self._on_ingress_revoked)
+        self.framework.observe(
+            self.on[HYDRA_LOGIN_UI_RELATION_NAME].relation_changed, self._hydra_login_ui_relation_change
+        )
 
     def _on_login_ui_pebble_ready(self, event: WorkloadEvent) -> None:
         """Define and start a workload using the Pebble API."""
@@ -76,13 +81,39 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
         self.unit.status = ActiveStatus()
 
+    def _hydra_login_ui_relation_change(self, event: RelationEvent) -> None:
+        try:
+            hydra_endpoint = self.hydra_login_ui_provider.get_hydra_endpoint()
+            self.config.update({"hydra_url", hydra_endpoint["hydra_endpoint"]})
+        except HydraLoginUIRelationMissingError as err:
+            logger.error(str(err))
+            self.unit.status = BlockedStatus("Failed to Process updated Hydra API endpoint")
+            return
+
+    def _update_login_ui_endpoints_relation_data(self, event: RelationEvent) -> None:
+        login_ui_endpoint = (
+            self.ingress.url
+            if self.ingress.is_ready()
+            else f"{self.app.name}.{self.model.name}.svc.cluster.local:{APPLICATION_PORT}",
+        )
+
+        logger.info(
+            f"Sending endpoints info: identity-platform-login-ui {login_ui_endpoint[0]}"
+        )
+
+        self.hydra_login_ui_provider.send_identity_platform_login_ui_endpoint(
+            self.app, login_ui_endpoint[0]
+        )
+
     def _on_ingress_ready(self, event: IngressPerAppReadyEvent) -> None:
         if self.unit.is_leader():
             logger.info("This app's public ingress URL: %s", event.url)
+        self._update_login_ui_endpoints_relation_data(event)
 
     def _on_ingress_revoked(self, event: IngressPerAppRevokedEvent) -> None:
         if self.unit.is_leader():
             logger.info("This app no longer has ingress")
+        self._update_login_ui_endpoints_relation_data(event)
 
     @property
     def _login_ui_layer(self) -> Layer:

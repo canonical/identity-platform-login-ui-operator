@@ -24,3 +24,9 @@ resources:
 requires:
   ingress:
     interface: ingress
+
+provides:
+  endpoint-info:
+    interface: hydra_login_ui
+    description: |
+      Provides rendered UI pages and proxies requests to a related Hydra application
