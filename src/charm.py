@@ -7,14 +7,18 @@
 """A Juju charm for Identity Platform Login UI."""
 import logging
 
+from charms.identity_platform_login_ui.v0.hydra_login_ui import (
+    HydraLoginUIProvider,
+    HydraLoginUIRelationDataMissingError,
+    HydraLoginUIRelationMissingError,
+)
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from charms.traefik_k8s.v1.ingress import (
     IngressPerAppReadyEvent,
     IngressPerAppRequirer,
     IngressPerAppRevokedEvent,
 )
-from charms.identity_platform_login_ui.v0.hydra_login_ui import HydraLoginUIProvider, HydraLoginUIRelationMissingError
-from ops.charm import CharmBase, ConfigChangedEvent, HookEvent, WorkloadEvent, RelationEvent
+from ops.charm import CharmBase, ConfigChangedEvent, HookEvent, RelationEvent, WorkloadEvent
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import ChangeError, Layer
@@ -50,7 +54,10 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self.framework.observe(self.ingress.on.ready, self._on_ingress_ready)
         self.framework.observe(self.ingress.on.revoked, self._on_ingress_revoked)
         self.framework.observe(
-            self.on[HYDRA_LOGIN_UI_RELATION_NAME].relation_changed, self._hydra_login_ui_relation_change
+            self.hydra_login_ui_provider.on.ready, self._hydra_login_ui_relation_ready
+        )
+        self.framework.observe(
+            self.on[HYDRA_LOGIN_UI_RELATION_NAME].relation_changed, self._on_config_changed
         )
 
     def _on_login_ui_pebble_ready(self, event: WorkloadEvent) -> None:
@@ -81,16 +88,25 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
         self.unit.status = ActiveStatus()
 
-    def _hydra_login_ui_relation_change(self, event: RelationEvent) -> None:
+    def _hydra_login_ui_relation_ready(self, event: RelationEvent) -> None:
+        self._update_login_ui_endpoints_relation_data(event)
         self._update_pebble_layer(event)
 
     def _get_hydra_url(self) -> str:
         try:
             hydra_endpoint = self.hydra_login_ui_provider.get_hydra_endpoint()
-            return hydra_endpoint.get("hydra_endpoint", self.config.get("hydra_url"))
+            return hydra_endpoint.get("hydra_endpoint")
         except HydraLoginUIRelationMissingError as err:
             logger.error(str(err))
-            self.unit.status = BlockedStatus("Failed to Process updated Hydra API endpoint")
+            self.unit.status = BlockedStatus(
+                "Failed to Process updated Hydra API endpoint: Relation Missing"
+            )
+            return self.config.get("hydra_url")
+        except HydraLoginUIRelationDataMissingError as err:
+            logger.error(str(err))
+            self.unit.status = BlockedStatus(
+                "Failed to Process updated Hydra API endpoint: Endpoint Data Missing"
+            )
             return self.config.get("hydra_url")
 
     def _update_login_ui_endpoints_relation_data(self, event: RelationEvent) -> None:
@@ -100,9 +116,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             else f"{self.app.name}.{self.model.name}.svc.cluster.local:{APPLICATION_PORT}",
         )
 
-        logger.info(
-            f"Sending endpoints info: identity-platform-login-ui {login_ui_endpoint[0]}"
-        )
+        logger.info(f"Sending endpoints info: identity-platform-login-ui {login_ui_endpoint[0]}")
 
         self.hydra_login_ui_provider.send_identity_platform_login_ui_endpoint(
             self.app, login_ui_endpoint[0]

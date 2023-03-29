@@ -70,6 +70,12 @@ class HydraLoginUIProviderEvents(ObjectEvents):
     ready = EventSource(HydraLoginUIRelationReadyEvent)
 
 
+class HydraLoginUIRequirerEvents(ObjectEvents):
+    """Event descriptor for events raised by `HydraLoginUIProvider`."""
+
+    ready = EventSource(HydraLoginUIRelationReadyEvent)
+
+
 class HydraLoginUIProvider(Object):
     """Provider side of the ui-endpoint-info relation."""
 
@@ -155,10 +161,21 @@ class HydraLoginUIRelationDataMissingError(HydraLoginUIRelationError):
 class HydraLoginUIRequirer(Object):
     """Requirer side of the relation."""
 
+    on = HydraLoginUIRequirerEvents()
+
     def __init__(self, charm: CharmBase, relation_name: str = RELATION_NAME):
         super().__init__(charm, relation_name)
-        self.charm = charm
+
+        self._charm = charm
         self._relation_name = relation_name
+
+        events = self._charm.on[self._relation_name]
+        self.framework.observe(
+            events.relation_created, self._on_requirer_relation_created
+        )
+
+    def _on_requirer_relation_created(self, event: RelationCreatedEvent):
+        self.on.ready.emit()
 
     def send_hydra_endpoint(
         self, charm: CharmBase, hydra_endpoint: str

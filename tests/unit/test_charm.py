@@ -124,7 +124,12 @@ def test_hydra_login_ui_info_relation_data(harness) -> None:
         "hydra_endpoint": TEST_HYDRA_RELATION_URL,
     }
 
-    assert harness.get_relation_data(ui_endpoint_info_relation_id, "identity-platform-login-ui-operator") == expected_login_ui_data
+    assert (
+        harness.get_relation_data(
+            ui_endpoint_info_relation_id, "identity-platform-login-ui-operator"
+        )
+        == expected_login_ui_data
+    )
     assert harness.get_relation_data(ui_endpoint_info_relation_id, "hydra") == expected_hydra_data
 
 
