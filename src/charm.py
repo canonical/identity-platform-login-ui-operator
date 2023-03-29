@@ -20,7 +20,7 @@ from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingSta
 from ops.pebble import ChangeError, Layer
 
 APPLICATION_PORT = "8080"
-HYDRA_LOGIN_UI_RELATION_NAME = "endpoint-info"
+HYDRA_LOGIN_UI_RELATION_NAME = "ui-endpoint-info"
 
 logger = logging.getLogger(__name__)
 
@@ -82,13 +82,16 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self.unit.status = ActiveStatus()
 
     def _hydra_login_ui_relation_change(self, event: RelationEvent) -> None:
+        self._update_pebble_layer(event)
+
+    def _get_hydra_url(self) -> str:
         try:
             hydra_endpoint = self.hydra_login_ui_provider.get_hydra_endpoint()
-            self.config.update({"hydra_url", hydra_endpoint["hydra_endpoint"]})
+            return hydra_endpoint.get("hydra_endpoint", self.config.get("hydra_url"))
         except HydraLoginUIRelationMissingError as err:
             logger.error(str(err))
             self.unit.status = BlockedStatus("Failed to Process updated Hydra API endpoint")
-            return
+            return self.config.get("hydra_url")
 
     def _update_login_ui_endpoints_relation_data(self, event: RelationEvent) -> None:
         login_ui_endpoint = (
@@ -128,7 +131,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                     "command": "identity_platform_login_ui",
                     "startup": "enabled",
                     "environment": {
-                        "HYDRA_ADMIN_URL": self.config.get("hydra_url"),
+                        "HYDRA_ADMIN_URL": self._get_hydra_url(),
                         "KRATOS_PUBLIC_URL": self.config.get("kratos_url"),
                         "PORT": APPLICATION_PORT,
                     },

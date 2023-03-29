@@ -11,7 +11,9 @@ from ops.model import ActiveStatus, WaitingStatus
 CONTAINER_NAME = "login-ui"
 TEST_PORT = "8080"
 TEST_HYDRA_URL = "http://hydra:port"
+TEST_HYDRA_RELATION_URL = "http://hydra-relation:port"
 TEST_KRATOS_URL = "http://kratos:port"
+TEST_LOGIN_UI_URL = "http://login:port"
 
 
 def setup_ingress_relation(harness) -> int:
@@ -24,6 +26,26 @@ def setup_ingress_relation(harness) -> int:
         relation_id,
         "traefik",
         {"ingress": json.dumps({"url": url})},
+    )
+    return relation_id
+
+
+def setup_hydra_relation(harness) -> int:
+    relation_id = harness.add_relation("ui-endpoint-info", "hydra")
+    harness.add_relation_unit(relation_id, "hydra/0")
+    harness.update_relation_data(
+        relation_id,
+        "hydra",
+        {
+            "hydra_endpoint": TEST_HYDRA_RELATION_URL,
+        },
+    )
+    harness.update_relation_data(
+        relation_id,
+        "identity-platform-login-ui-operator",
+        {
+            "login_ui_endpoint": TEST_LOGIN_UI_URL,
+        },
     )
     return relation_id
 
@@ -80,6 +102,51 @@ def test_layer_updated(harness) -> None:
                 "environment": {
                     "HYDRA_ADMIN_URL": TEST_HYDRA_URL,
                     "KRATOS_PUBLIC_URL": TEST_KRATOS_URL,
+                    "PORT": TEST_PORT,
+                },
+            }
+        },
+    }
+
+    assert harness.charm._login_ui_layer.to_dict() == expected_layer
+
+
+def test_hydra_login_ui_info_relation_data(harness) -> None:
+    harness.set_leader(True)
+    harness.set_can_connect(CONTAINER_NAME, True)
+
+    ui_endpoint_info_relation_id = setup_hydra_relation(harness)
+
+    expected_login_ui_data = {
+        "login_ui_endpoint": TEST_LOGIN_UI_URL,
+    }
+    expected_hydra_data = {
+        "hydra_endpoint": TEST_HYDRA_RELATION_URL,
+    }
+
+    assert harness.get_relation_data(ui_endpoint_info_relation_id, "identity-platform-login-ui-operator") == expected_login_ui_data
+    assert harness.get_relation_data(ui_endpoint_info_relation_id, "hydra") == expected_hydra_data
+
+
+def test_hydra_login_ui_updated_pebble_layer(harness) -> None:
+    harness.set_leader(True)
+    harness.set_can_connect(CONTAINER_NAME, True)
+    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
+
+    _ = setup_hydra_relation(harness)
+
+    expected_layer = {
+        "summary": "login_ui layer",
+        "description": "pebble config layer for identity platform login ui",
+        "services": {
+            CONTAINER_NAME: {
+                "override": "replace",
+                "summary": "identity platform login ui",
+                "command": "identity_platform_login_ui",
+                "startup": "enabled",
+                "environment": {
+                    "HYDRA_ADMIN_URL": TEST_HYDRA_RELATION_URL,
+                    "KRATOS_PUBLIC_URL": None,
                     "PORT": TEST_PORT,
                 },
             }

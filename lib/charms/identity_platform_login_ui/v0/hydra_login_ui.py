@@ -14,7 +14,7 @@ To use the library from the requirer side:
 In the `metadata.yaml` of the charm, add the following:
 ```yaml
 requires:
-  endpoint-info:
+  ui-endpoint-info:
     interface: hydra_login_ui
     limit: 1
 ```
@@ -55,7 +55,7 @@ LIBAPI = 0
 # to 0 if you are raising the major API version
 LIBPATCH = 0
 
-RELATION_NAME = "endpoint-info"
+RELATION_NAME = "ui-endpoint-info"
 INTERFACE_NAME = "hydra_login_ui"
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ class HydraLoginUIProviderEvents(ObjectEvents):
 
 
 class HydraLoginUIProvider(Object):
-    """Provider side of the endpoint-info relation."""
+    """Provider side of the ui-endpoint-info relation."""
 
     on = HydraLoginUIProviderEvents()
 
@@ -81,7 +81,7 @@ class HydraLoginUIProvider(Object):
         self._charm = charm
         self._relation_name = relation_name
 
-        events = self._charm.on[relation_name]
+        events = self._charm.on[self._relation_name]
         self.framework.observe(
             events.relation_created, self._on_provider_relation_created
         )
@@ -108,7 +108,7 @@ class HydraLoginUIProvider(Object):
         """Get hydra endpoint."""
         if not self.model.unit.is_leader():
             return
-        endpoint = self.model.relations[self.relation_name]
+        endpoint = self.model.relations[self._relation_name]
         if len(endpoint) == 0:
             raise HydraLoginUIRelationMissingError()
 
@@ -158,7 +158,7 @@ class HydraLoginUIRequirer(Object):
     def __init__(self, charm: CharmBase, relation_name: str = RELATION_NAME):
         super().__init__(charm, relation_name)
         self.charm = charm
-        self.relation_name = relation_name
+        self._relation_name = relation_name
 
     def send_hydra_endpoint(
         self, charm: CharmBase, hydra_endpoint: str
@@ -179,7 +179,7 @@ class HydraLoginUIRequirer(Object):
         """Get the identity-platform-login-ui endpoint."""
         if not self.model.unit.is_leader():
             return
-        endpoint = self.model.relations[self.relation_name]
+        endpoint = self.model.relations[self._relation_name]
         if len(endpoint) == 0:
             raise HydraLoginUIRelationMissingError()
 

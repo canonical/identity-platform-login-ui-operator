@@ -21,12 +21,16 @@ resources:
     description: OCI image for login-ui
     upstream-source: ghcr.io/canonical/identity-platform-login-ui:latest
 
+peers:
+  connections:
+    interface: connections
+
 requires:
   ingress:
     interface: ingress
 
 provides:
-  endpoint-info:
+  ui-endpoint-info:
     interface: hydra_login_ui
     description: |
       Provides rendered UI pages and proxies requests to a related Hydra application
