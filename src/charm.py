@@ -7,19 +7,27 @@
 """A Juju charm for Identity Platform Login UI."""
 import logging
 
+from charms.hydra.v0.hydra_endpoints import (
+    HydraEndpointsRelationDataMissingError,
+    HydraEndpointsRequirer,
+)
+from charms.identity_platform_login_ui.v0.login_ui_endpoint import LoginUIEndpointProvider
+from charms.kratos.v0.kratos_endpoints import (
+    KratosEndpointsRelationDataMissingError,
+    KratosEndpointsRequirer,
+)
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from charms.traefik_k8s.v1.ingress import (
     IngressPerAppReadyEvent,
     IngressPerAppRequirer,
     IngressPerAppRevokedEvent,
 )
-from ops.charm import CharmBase, ConfigChangedEvent, HookEvent, WorkloadEvent
+from ops.charm import CharmBase, ConfigChangedEvent, HookEvent, RelationEvent, WorkloadEvent
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import ChangeError, Layer
 
 APPLICATION_PORT = "8080"
-
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +40,8 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         super().__init__(*args)
         self._container_name = "login-ui"
         self._container = self.unit.get_container(self._container_name)
+        self._hydra_relation_name = "endpoint-info"
+        self._kratos_relation_name = "kratos-endpoint-info"
 
         self.service_patcher = KubernetesServicePatch(
             self, [("identity-platform-login-ui", int(APPLICATION_PORT))]
@@ -42,11 +52,28 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             port=APPLICATION_PORT,
             strip_prefix=True,
         )
+        self.hydra_endpoints = HydraEndpointsRequirer(
+            self, relation_name=self._hydra_relation_name
+        )
+        self.kratos_endpoints = KratosEndpointsRequirer(
+            self, relation_name=self._kratos_relation_name
+        )
+
+        self.endpoint_provider = LoginUIEndpointProvider(self)
 
         self.framework.observe(self.on.login_ui_pebble_ready, self._on_login_ui_pebble_ready)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.ingress.on.ready, self._on_ingress_ready)
         self.framework.observe(self.ingress.on.revoked, self._on_ingress_revoked)
+        self.framework.observe(
+            self.endpoint_provider.on.ready, self._update_login_ui_endpoint_relation_data
+        )
+        self.framework.observe(
+            self.on[self._hydra_relation_name].relation_changed, self._on_config_changed
+        )
+        self.framework.observe(
+            self.on[self._kratos_relation_name].relation_changed, self._on_config_changed
+        )
 
     def _on_login_ui_pebble_ready(self, event: WorkloadEvent) -> None:
         """Define and start a workload using the Pebble API."""
@@ -79,10 +106,49 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
     def _on_ingress_ready(self, event: IngressPerAppReadyEvent) -> None:
         if self.unit.is_leader():
             logger.info("This app's public ingress URL: %s", event.url)
+        self._update_pebble_layer(event)
+        self._update_login_ui_endpoint_relation_data(event)
 
     def _on_ingress_revoked(self, event: IngressPerAppRevokedEvent) -> None:
         if self.unit.is_leader():
             logger.info("This app no longer has ingress")
+        self._update_pebble_layer(event)
+        self._update_login_ui_endpoint_relation_data(event)
+
+    def _update_login_ui_endpoint_relation_data(self, event: RelationEvent) -> None:
+        endpoint = (
+            self.ingress.url
+            if self.ingress.is_ready()
+            else f"{self.app.name}.{self.model.name}.svc.cluster.local:{APPLICATION_PORT}",
+        )
+
+        logger.info(f"Sending login ui endpoint info: endpoint - {endpoint[0]}")
+
+        self.endpoint_provider.send_endpoint_relation_data(endpoint[0])
+
+    def _get_hydra_endpoint_info(self) -> str:
+        hydra_url = None
+        if self.model.relations[self._hydra_relation_name]:
+            try:
+                hydra_endpoints = self.hydra_endpoints.get_hydra_endpoints()
+                hydra_url = hydra_endpoints["public_endpoint"]
+            except HydraEndpointsRelationDataMissingError:
+                logger.info("No hydra endpoint-info relation data found")
+                return None
+
+        return hydra_url
+
+    def _get_kratos_endpoint_info(self) -> str:
+        kratos_url = None
+        if self.model.relations[self._kratos_relation_name]:
+            try:
+                kratos_endpoints = self.kratos_endpoints.get_kratos_endpoints()
+                kratos_url = kratos_endpoints["public_endpoint"]
+            except KratosEndpointsRelationDataMissingError:
+                logger.info("No kratos endpoint-info relation data found")
+                return None
+
+        return kratos_url
 
     @property
     def _login_ui_layer(self) -> Layer:
@@ -97,8 +163,8 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                     "command": "identity_platform_login_ui",
                     "startup": "enabled",
                     "environment": {
-                        "HYDRA_ADMIN_URL": self.config.get("hydra_url"),
-                        "KRATOS_PUBLIC_URL": self.config.get("kratos_url"),
+                        "HYDRA_ADMIN_URL": self._get_hydra_endpoint_info(),
+                        "KRATOS_PUBLIC_URL": self._get_kratos_endpoint_info(),
                         "PORT": APPLICATION_PORT,
                     },
                 }
