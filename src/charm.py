@@ -6,7 +6,12 @@
 
 """A Juju charm for Identity Platform Login UI."""
 import logging
+from typing import Optional
 
+from charms.kratos.v0.kratos_endpoints import (
+    KratosEndpointsRelationDataMissingError,
+    KratosEndpointsRequirer,
+)
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from charms.traefik_k8s.v1.ingress import (
     IngressPerAppReadyEvent,
@@ -32,6 +37,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         super().__init__(*args)
         self._container_name = "login-ui"
         self._container = self.unit.get_container(self._container_name)
+        self._kratos_relation_name = "kratos-endpoint-info"
 
         self.service_patcher = KubernetesServicePatch(
             self, [("identity-platform-login-ui", int(APPLICATION_PORT))]
@@ -43,8 +49,15 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             strip_prefix=True,
         )
 
+        self.kratos_endpoints = KratosEndpointsRequirer(
+            self, relation_name=self._kratos_relation_name
+        )
+
         self.framework.observe(self.on.login_ui_pebble_ready, self._on_login_ui_pebble_ready)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(
+            self.on[self._kratos_relation_name].relation_changed, self._update_pebble_layer
+        )
         self.framework.observe(self.ingress.on.ready, self._on_ingress_ready)
         self.framework.observe(self.ingress.on.revoked, self._on_ingress_revoked)
 
@@ -98,13 +111,24 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                     "startup": "enabled",
                     "environment": {
                         "HYDRA_ADMIN_URL": self.config.get("hydra_url"),
-                        "KRATOS_PUBLIC_URL": self.config.get("kratos_url"),
+                        "KRATOS_PUBLIC_URL": self._get_kratos_endpoint_info(),
                         "PORT": APPLICATION_PORT,
                     },
                 }
             },
         }
         return Layer(pebble_layer)
+
+    def _get_kratos_endpoint_info(self) -> Optional[str]:
+        kratos_public_url = ""
+        if self.model.relations[self._kratos_relation_name]:
+            try:
+                kratos_endpoints = self.kratos_endpoints.get_kratos_endpoints()
+                kratos_public_url = kratos_endpoints["public_endpoint"]
+            except KratosEndpointsRelationDataMissingError:
+                logger.info("No kratos-endpoint-info relation data found")
+
+        return kratos_public_url
 
 
 if __name__ == "__main__":  # pragma: nocover
