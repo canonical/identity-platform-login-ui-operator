@@ -18,14 +18,22 @@ juju deploy identity-platform-login-ui-operator
 To set the Ory Kratos endpoint to the UI server, do:
 
 ```console
-juju config identity-platform-login-ui-operator kratos_url={kratos_url:port}
+juju relate identity-platform-login-ui-operator kratos
 ```
 
 To set the Ory Hydra endpoint to the UI server, do:
 
 ```console
-juju config identity-platform-login-ui-operator hydra_url={hydra_url:port}
+juju relate identity-platform-login-ui-operator hydra
 ```
+
+To set the UI server's endpoint to Hydra and Kratos, do:
+
+```console
+juju relate hydra identity-platform-login-ui-operator
+juju relate kratos identity-platform-login-ui-operator
+```
+
 ### Ingress
 
 The Identity Platform Login UI Operator offers integration with the [traefik-k8s-operator](https://github.com/canonical/traefik-k8s-operator) for ingress.
