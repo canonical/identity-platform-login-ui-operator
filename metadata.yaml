@@ -27,3 +27,12 @@ requires:
   kratos-endpoint-info:
     interface: kratos_endpoints
     limit: 1
+  endpoint-info:
+    interface: hydra_endpoints
+    limit: 1
+
+provides:
+  ui-endpoint-info:
+    interface: login_ui_endpoint
+    description: |
+      Provides the Identity Platform Login UI API endpoint to a related application
