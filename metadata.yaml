@@ -33,6 +33,6 @@ requires:
 
 provides:
   ui-endpoint-info:
-    interface: login_ui_endpoint
+    interface: login_ui_endpoints
     description: |
-      Provides the Identity Platform Login UI API endpoint to a related application
+      Provides the Identity Platform Login UI API endpoints to a related application

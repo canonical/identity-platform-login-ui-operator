@@ -1,4 +1,4 @@
-# Publish hydra_endpoints library only if it has changed
+# Publish login_ui_endpoints library only if it has changed
 name: Publish library
 
 on:
@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - "./lib/charms/identity_platform_login_ui_operator/v0/login_ui_endpoint.py"
+      - "./lib/charms/identity_platform_login_ui_operator/v0/login_ui_endpoints.py"
 
 jobs:
   publish-lib:
@@ -23,4 +23,4 @@ jobs:
         env:
           CHARMCRAFT_AUTH: ${{ secrets.CHARMCRAFT_CREDENTIALS }}
         run: |
-          charmcraft publish-lib charms.identity_platform_login_ui_operator.v0.login_ui_endpoint
+          charmcraft publish-lib charms.identity_platform_login_ui_operator.v0.login_ui_endpoints

@@ -12,7 +12,9 @@ from charms.hydra.v0.hydra_endpoints import (
     HydraEndpointsRelationDataMissingError,
     HydraEndpointsRequirer,
 )
-from charms.identity_platform_login_ui_operator.v0.login_ui_endpoint import LoginUIEndpointProvider
+from charms.identity_platform_login_ui_operator.v0.login_ui_endpoints import (
+    LoginUIEndpointsProvider,
+)
 from charms.kratos.v0.kratos_endpoints import (
     KratosEndpointsRelationDataMissingError,
     KratosEndpointsRequirer,
@@ -61,7 +63,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self.hydra_endpoints = HydraEndpointsRequirer(
             self, relation_name=self._hydra_relation_name
         )
-        self.endpoint_provider = LoginUIEndpointProvider(self)
+        self.endpoints_provider = LoginUIEndpointsProvider(self)
 
         self.framework.observe(self.on.login_ui_pebble_ready, self._on_login_ui_pebble_ready)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
@@ -69,7 +71,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             self.on[self._kratos_relation_name].relation_changed, self._update_pebble_layer
         )
         self.framework.observe(
-            self.endpoint_provider.on.ready, self._update_login_ui_endpoint_relation_data
+            self.endpoints_provider.on.ready, self._update_login_ui_endpoint_relation_data
         )
         self.framework.observe(
             self.on[self._hydra_relation_name].relation_changed, self._update_pebble_layer
@@ -155,7 +157,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
         logger.info(f"Sending login ui endpoint info: endpoint - {endpoint[0]}")
 
-        self.endpoint_provider.send_endpoint_relation_data(endpoint[0])
+        self.endpoint_provider.send_endpoints_relation_data(endpoint[0])
 
     def _get_hydra_endpoint_info(self) -> str:
         hydra_url = ""

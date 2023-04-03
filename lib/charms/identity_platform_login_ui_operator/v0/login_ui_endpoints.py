@@ -2,8 +2,8 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Interface library for sharing Identity Platform Login UI application's endpoint with other charms.
-This library provides a Python API for both requesting and providing a public endpoint.
+"""Interface library for sharing Identity Platform Login UI application's endpoints with other charms.
+This library provides a Python API for both requesting and providing a public endpoints.
 ## Getting Started
 To get started using the library, you need to fetch the library using `charmcraft`.
 ```shell
@@ -14,25 +14,25 @@ To use the library from the requirer side:
 In the `metadata.yaml` of the charm, add the following:
 ```yaml
 requires:
-  ui-endpoint-info:
-    interface: login_ui_endpoint
+  ui-endpoints-info:
+    interface: login_ui_endpoints
     limit: 1
 ```
 Then, to initialise the library:
 ```python
-from charms.identity_platform_login_ui.v0.login_ui_endpoint import (
-    LoginUIEndpointRelationError,
-    LoginUIEndpointRequirer,
+from charms.identity_platform_login_ui.v0.login_ui_endpoints import (
+    LoginUIEndpointsRelationError,
+    LoginUIEndpointsRequirer,
 )
 Class SomeCharm(CharmBase):
     def __init__(self, *args):
-        self.login_ui_endpoint_relation = LoginUIEndpointRequirer(self)
+        self.login_ui_endpoints_relation = LoginUIEndpointsRequirer(self)
         self.framework.observe(self.on.some_event_emitted, self.some_event_function)
     def some_event_function():
         # fetch the relation info
         try:
-            login_ui_endpoint = self.login_ui_endpoint_relation.get_login_ui_endpoint()
-        except LoginUIEndpointRelationError as error:
+            login_ui_endpoints = self.login_ui_endpoints_relation.get_login_ui_endpoints()
+        except LoginUIEndpointsRelationError as error:
             ...
 ```
 """
@@ -55,24 +55,24 @@ LIBAPI = 0
 LIBPATCH = 1
 
 RELATION_NAME = "ui-endpoint-info"
-INTERFACE_NAME = "login_ui_endpoint"
+INTERFACE_NAME = "login_ui_endpoints"
 logger = logging.getLogger(__name__)
 
 
-class LoginUIEndpointRelationReadyEvent(EventBase):
+class LoginUIEndpointsRelationReadyEvent(EventBase):
     """Event to notify the charm that the relation is ready."""
 
 
-class LoginUIEndpointProviderEvents(ObjectEvents):
-    """Event descriptor for events raised by `LoginUIEndpointProvider`."""
+class LoginUIEndpointsProviderEvents(ObjectEvents):
+    """Event descriptor for events raised by `LoginUIEndpointsProvider`."""
 
-    ready = EventSource(LoginUIEndpointRelationReadyEvent)
+    ready = EventSource(LoginUIEndpointsRelationReadyEvent)
 
 
-class LoginUIEndpointProvider(Object):
+class LoginUIEndpointsProvider(Object):
     """Provider side of the endpoint-info relation."""
 
-    on = LoginUIEndpointProviderEvents()
+    on = LoginUIEndpointsProviderEvents()
 
     def __init__(self, charm: CharmBase, relation_name: str = RELATION_NAME):
         super().__init__(charm, relation_name)
@@ -82,13 +82,13 @@ class LoginUIEndpointProvider(Object):
 
         events = self._charm.on[relation_name]
         self.framework.observe(
-            events.relation_created, self._on_provider_endpoint_relation_created
+            events.relation_created, self._on_provider_endpoints_relation_created
         )
 
-    def _on_provider_endpoint_relation_created(self, event: RelationCreatedEvent) -> None:
+    def _on_provider_endpoints_relation_created(self, event: RelationCreatedEvent) -> None:
         self.on.ready.emit()
 
-    def send_endpoint_relation_data(self, endpoint: str) -> None:
+    def send_endpoints_relation_data(self, endpoint: str) -> None:
         """Updates relation with endpoint info."""
         if not self._charm.unit.is_leader():
             return
@@ -102,21 +102,21 @@ class LoginUIEndpointProvider(Object):
             )
 
 
-class LoginUIEndpointRelationError(Exception):
+class LoginUIEndpointsRelationError(Exception):
     """Base class for the relation exceptions."""
 
     pass
 
 
-class LoginUIEndpointRelationMissingError(LoginUIEndpointRelationError):
+class LoginUIEndpointsRelationMissingError(LoginUIEndpointsRelationError):
     """Raised when the relation is missing."""
 
     def __init__(self) -> None:
-        self.message = "Missing endpoint-info relation with Identity Platform Login UI"
+        self.message = "Missing ui-endpoint-info relation with Identity Platform Login UI"
         super().__init__(self.message)
 
 
-class LoginUIEndpointRelationDataMissingError(LoginUIEndpointRelationError):
+class LoginUIEndpointsRelationDataMissingError(LoginUIEndpointsRelationError):
     """Raised when information is missing from the relation."""
 
     def __init__(self, message: str) -> None:
@@ -124,7 +124,7 @@ class LoginUIEndpointRelationDataMissingError(LoginUIEndpointRelationError):
         super().__init__(self.message)
 
 
-class LoginUIEndpointRequirer(Object):
+class LoginUIEndpointsRequirer(Object):
     """Requirer side of the ui-endpoint-info relation."""
 
     def __init__(self, charm: CharmBase, relation_name: str = RELATION_NAME):
@@ -132,13 +132,13 @@ class LoginUIEndpointRequirer(Object):
         self.charm = charm
         self._relation_name = relation_name
 
-    def get_login_ui_endpoint(self) -> Optional[Dict]:
+    def get_login_ui_endpoints(self) -> Optional[Dict]:
         """Get the Identity Platform Login UI endpoints."""
         if not self.model.unit.is_leader():
             return None
         endpoint = self.model.relations[self._relation_name]
         if len(endpoint) == 0:
-            raise LoginUIEndpointRelationMissingError()
+            raise LoginUIEndpointsRelationMissingError()
 
         remote_app = [
             app
@@ -149,12 +149,12 @@ class LoginUIEndpointRequirer(Object):
         data = endpoint[0].data[remote_app]
 
         if "endpoint" not in data:
-            raise LoginUIEndpointRelationDataMissingError(
+            raise LoginUIEndpointsRelationDataMissingError(
                 "Missing endpoint in ui-endpoint-info relation data"
             )
 
         if data["endpoint"] == "":
-            raise LoginUIEndpointRelationDataMissingError(
+            raise LoginUIEndpointsRelationDataMissingError(
                 "Missing endpoint in ui-endpoint-info relation data"
             )
 
