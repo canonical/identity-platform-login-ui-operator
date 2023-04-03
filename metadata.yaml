@@ -24,3 +24,6 @@ resources:
 requires:
   ingress:
     interface: ingress
+  kratos-endpoint-info:
+    interface: kratos_endpoints
+    limit: 1
