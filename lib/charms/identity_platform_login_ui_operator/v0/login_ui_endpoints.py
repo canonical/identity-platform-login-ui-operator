@@ -65,6 +65,7 @@ RELATION_KEYS = [
     "login",
     "oidc_error",
     "registration",
+    "browser",
 ]
 
 
@@ -112,7 +113,7 @@ class LoginUIEndpointsProvider(Object):
                     "login": f"{endpoint}/login",
                     "oidc_error": f"{endpoint}/oidc_error",
                     "registration": f"{endpoint}/registration",
-
+                    "browser": endpoint,
                 }
             )
 
