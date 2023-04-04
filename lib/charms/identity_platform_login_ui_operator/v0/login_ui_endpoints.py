@@ -141,7 +141,7 @@ class LoginUIEndpointsRelationDataMissingError(LoginUIEndpointsRelationError):
 
 
 class LoginUIEndpointsRelationUnavailableError(LoginUIEndpointsRelationError):
-    """Raised when Login UI cannot be accesed."""
+    """Raised when Login UI cannot be accessed."""
 
     def __init__(self, message: str) -> None:
         self.message = message
