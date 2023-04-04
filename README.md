@@ -13,7 +13,7 @@ The Identity Platform Login UI Operator may be deployed using with the following
 juju deploy identity-platform-login-ui-operator
 ```
 
-## Interacting other components
+## Relations
 
 ### Hydra
 

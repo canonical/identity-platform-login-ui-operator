@@ -52,11 +52,20 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 2
 
 RELATION_NAME = "ui-endpoint-info"
 INTERFACE_NAME = "login_ui_endpoints"
 logger = logging.getLogger(__name__)
+
+RELATION_KEYS = [
+    "consent",
+    "error",
+    "index",
+    "login",
+    "oidc_error",
+    "registration",
+]
 
 
 class LoginUIEndpointsRelationReadyEvent(EventBase):
@@ -97,7 +106,13 @@ class LoginUIEndpointsProvider(Object):
         for relation in relations:
             relation.data[self._charm.app].update(
                 {
-                    "endpoint": endpoint,
+                    "consent": f"{endpoint}/consent",
+                    "error": f"{endpoint}/error",
+                    "index": f"{endpoint}/index",
+                    "login": f"{endpoint}/login",
+                    "oidc_error": f"{endpoint}/oidc_error",
+                    "registration": f"{endpoint}/registration",
+
                 }
             )
 
@@ -136,28 +151,28 @@ class LoginUIEndpointsRequirer(Object):
         """Get the Identity Platform Login UI endpoints."""
         if not self.model.unit.is_leader():
             return None
-        endpoint = self.model.relations[self._relation_name]
-        if len(endpoint) == 0:
+        endpoints = self.model.relations[self._relation_name]
+        if len(endpoints) == 0:
             raise LoginUIEndpointsRelationMissingError()
 
         remote_app = [
             app
-            for app in endpoint[0].data.keys()
+            for app in endpoints[0].data.keys()
             if isinstance(app, Application) and not app._is_our_app
         ][0]
 
-        data = endpoint[0].data[remote_app]
+        data = endpoints[0].data[remote_app]
+        return_dict = {}
 
-        if "endpoint" not in data:
-            raise LoginUIEndpointsRelationDataMissingError(
-                "Missing endpoint in ui-endpoint-info relation data"
-            )
+        for k in RELATION_KEYS:
+            if k not in data:
+                raise LoginUIEndpointsRelationDataMissingError(
+                    "Missing endpoints in ui-endpoint-info relation data"
+                )
+            if data[k] == "":
+                raise LoginUIEndpointsRelationDataMissingError(
+                    "Missing endpoints in ui-endpoint-info relation data"
+                )
+            return_dict[k] = data[k]
 
-        if data["endpoint"] == "":
-            raise LoginUIEndpointsRelationDataMissingError(
-                "Missing endpoint in ui-endpoint-info relation data"
-            )
-
-        return {
-            "endpoint": data["endpoint"],
-        }
+        return return_dict
