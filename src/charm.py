@@ -142,15 +142,13 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         return Layer(pebble_layer)
 
     def _get_kratos_endpoint_info(self) -> Optional[str]:
-        kratos_public_url = ""
         if self.model.relations[self._kratos_relation_name]:
             try:
                 kratos_endpoints = self.kratos_endpoints.get_kratos_endpoints()
                 kratos_public_url = kratos_endpoints["public_endpoint"]
+                return kratos_public_url
             except KratosEndpointsRelationDataMissingError:
                 logger.info("No kratos-endpoint-info relation data found")
-
-        return kratos_public_url
 
     def _update_login_ui_endpoint_relation_data(self, event: RelationEvent) -> None:
         endpoint = (self.ingress.url if self.ingress.is_ready() else "",)
@@ -159,16 +157,14 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
         self.endpoint_provider.send_endpoints_relation_data(endpoint[0])
 
-    def _get_hydra_endpoint_info(self) -> str:
-        hydra_url = ""
+    def _get_hydra_endpoint_info(self) -> Optional[str]:
         if self.model.relations[self._hydra_relation_name]:
             try:
                 hydra_endpoints = self.hydra_endpoints.get_hydra_endpoints()
                 hydra_url = hydra_endpoints["public_endpoint"]
+                return hydra_url
             except HydraEndpointsRelationDataMissingError:
                 logger.info("No hydra endpoint-info relation data found")
-
-        return hydra_url
 
 
 if __name__ == "__main__":  # pragma: nocover
