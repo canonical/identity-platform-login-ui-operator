@@ -51,4 +51,4 @@ jobs:
         if: failure()
 
       - name: Get identity-platform-login-ui-operato container logs
-        run: kubectl logs identity-platform-login-ui-operato-0 -c login-ui -n testing
+        run: kubectl logs identity-platform-login-ui-operator-0 -c login-ui -n testing
