@@ -153,7 +153,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         return None
 
     def _update_login_ui_endpoint_relation_data(self, event: RelationEvent) -> None:
-        endpoint = (self.ingress.url if self.ingress.is_ready() else "")
+        endpoint = self.ingress.url if self.ingress.is_ready() else ""
 
         logger.info(f"Sending login ui endpoint info: endpoint - {endpoint[0]}")
 
