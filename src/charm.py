@@ -149,15 +149,15 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                 return kratos_public_url
             except KratosEndpointsRelationDataMissingError:
                 logger.info("No kratos-endpoint-info relation data found")
-                return None
-        return None
+                return ""
+        return ""
 
     def _update_login_ui_endpoint_relation_data(self, event: RelationEvent) -> None:
         endpoint = self.ingress.url if self.ingress.is_ready() else ""
 
         logger.info(f"Sending login ui endpoint info: endpoint - {endpoint[0]}")
 
-        self.endpoint_provider.send_endpoints_relation_data(endpoint[0])
+        self.endpoints_provider.send_endpoints_relation_data(endpoint[0])
 
     def _get_hydra_endpoint_info(self) -> Optional[str]:
         if self.model.relations[self._hydra_relation_name]:
@@ -167,8 +167,8 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                 return hydra_url
             except HydraEndpointsRelationDataMissingError:
                 logger.info("No hydra endpoint-info relation data found")
-                return None
-        return None
+                return ""
+        return ""
 
 
 if __name__ == "__main__":  # pragma: nocover

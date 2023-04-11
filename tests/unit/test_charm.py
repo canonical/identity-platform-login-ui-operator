@@ -102,8 +102,8 @@ def test_layer_updated_without_any_endpoint_info(harness) -> None:
                 "command": "identity_platform_login_ui",
                 "startup": "enabled",
                 "environment": {
-                    "HYDRA_ADMIN_URL": None,
-                    "KRATOS_PUBLIC_URL": None,
+                    "HYDRA_ADMIN_URL": "",
+                    "KRATOS_PUBLIC_URL": "",
                     "PORT": TEST_PORT,
                 },
             }
@@ -130,7 +130,7 @@ def test_layer_updated_with_kratos_endpoint_info(harness) -> None:
                 "command": "identity_platform_login_ui",
                 "startup": "enabled",
                 "environment": {
-                    "HYDRA_ADMIN_URL": None,
+                    "HYDRA_ADMIN_URL": "",
                     "KRATOS_PUBLIC_URL": harness.get_relation_data(kratos_relation_id, "kratos")[
                         "public_endpoint"
                     ],
@@ -163,7 +163,7 @@ def test_layer_updated_with_hydra_endpoint_info(harness) -> None:
                     "HYDRA_ADMIN_URL": harness.get_relation_data(hydra_relation_id, "hydra")[
                         "public_endpoint"
                     ],
-                    "KRATOS_PUBLIC_URL": None,
+                    "KRATOS_PUBLIC_URL": "",
                     "PORT": TEST_PORT,
                 },
             }
