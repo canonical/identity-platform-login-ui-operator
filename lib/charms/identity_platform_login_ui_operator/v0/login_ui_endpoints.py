@@ -169,7 +169,7 @@ class LoginUIEndpointsRequirer(Object):
         if len(ui_endpoint_relations) == 0:
             raise LoginUIEndpointsRelationMissingError()
 
-        if any(not ui_endpoint_relations[index].app for index in range(ui_endpoint_relations)):
+        if not (app := ui_endpoint_relations[0].app):
             raise LoginUIEndpointsRelationMissingError()
 
         ui_endpoint_relation_data = ui_endpoint_relations[0].data[ui_endpoint_relations[0].app]
