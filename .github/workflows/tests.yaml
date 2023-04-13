@@ -50,5 +50,5 @@ jobs:
         run: juju debug-log --replay --include identity-platform-login-ui-operator/0
         if: failure()
 
-      - name: Get identity-platform-login-ui-operato container logs
+      - name: Get identity-platform-login-ui-operator container logs
         run: kubectl logs identity-platform-login-ui-operator-0 -c login-ui -n testing
