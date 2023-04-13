@@ -9,10 +9,12 @@ import logging
 
 from charms.hydra.v0.hydra_endpoints import (
     HydraEndpointsRelationDataMissingError,
+    HydraEndpointsRelationMissingError,
     HydraEndpointsRequirer,
 )
 from charms.identity_platform_login_ui_operator.v0.login_ui_endpoints import (
     LoginUIEndpointsProvider,
+    LoginUINonLeaderOperationError,
 )
 from charms.kratos.v0.kratos_endpoints import (
     KratosEndpointsRelationDataMissingError,
@@ -153,19 +155,21 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
     def _update_login_ui_endpoint_relation_data(self, event: RelationEvent) -> None:
         endpoint = self.ingress.url if self.ingress.is_ready() else ""
-
-        logger.info(f"Sending login ui endpoint info: endpoint - {endpoint[0]}")
-
-        self.endpoints_provider.send_endpoints_relation_data(endpoint[0])
+        try:
+            self.endpoints_provider.send_endpoints_relation_data(endpoint[0])
+            logger.info(f"Sending login ui endpoint info: endpoint - {endpoint[0]}")
+        except LoginUINonLeaderOperationError:
+            logger.info("Non-leader unit can't update relation data")
 
     def _get_hydra_endpoint_info(self) -> str:
         hydra_url = ""
-        if self.model.relations[self._hydra_relation_name]:
-            try:
-                hydra_endpoints = self.hydra_endpoints.get_hydra_endpoints()
-                hydra_url = hydra_endpoints["public_endpoint"]
-            except HydraEndpointsRelationDataMissingError:
-                logger.info("No hydra endpoint-info relation data found")
+        try:
+            hydra_endpoints = self.hydra_endpoints.get_hydra_endpoints()
+            hydra_url = hydra_endpoints["public_endpoint"]
+        except HydraEndpointsRelationDataMissingError:
+            logger.info("No hydra endpoint-info relation data found")
+        except HydraEndpointsRelationMissingError:
+            logger.info("No hydra endpoint-info relation found")
         return hydra_url
 
 
