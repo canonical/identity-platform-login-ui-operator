@@ -156,8 +156,8 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
     def _update_login_ui_endpoint_relation_data(self, event: RelationEvent) -> None:
         endpoint = self.ingress.url if self.ingress.is_ready() else ""
         try:
-            self.endpoints_provider.send_endpoints_relation_data(endpoint[0])
-            logger.info(f"Sending login ui endpoint info: endpoint - {endpoint[0]}")
+            self.endpoints_provider.send_endpoints_relation_data(endpoint)
+            logger.info(f"Sending login ui endpoint info: endpoint - {endpoint}")
         except LoginUINonLeaderOperationError:
             logger.info("Non-leader unit can't update relation data")
 
