@@ -165,7 +165,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         hydra_url = ""
         try:
             hydra_endpoints = self.hydra_endpoints.get_hydra_endpoints()
-            hydra_url = hydra_endpoints["public_endpoint"]
+            hydra_url = hydra_endpoints["admin_endpoint"]
         except HydraEndpointsRelationDataMissingError:
             logger.info("No hydra endpoint-info relation data found")
         except HydraEndpointsRelationMissingError:
