@@ -161,7 +161,7 @@ def test_layer_updated_with_hydra_endpoint_info(harness) -> None:
                 "startup": "enabled",
                 "environment": {
                     "HYDRA_ADMIN_URL": harness.get_relation_data(hydra_relation_id, "hydra")[
-                        "public_endpoint"
+                        "admin_endpoint"
                     ],
                     "KRATOS_PUBLIC_URL": "",
                     "PORT": TEST_PORT,
@@ -192,7 +192,7 @@ def test_layer_updated_with_endpoint_info(harness) -> None:
                 "startup": "enabled",
                 "environment": {
                     "HYDRA_ADMIN_URL": harness.get_relation_data(hydra_relation_id, "hydra")[
-                        "public_endpoint"
+                        "admin_endpoint"
                     ],
                     "KRATOS_PUBLIC_URL": harness.get_relation_data(kratos_relation_id, "kratos")[
                         "public_endpoint"
