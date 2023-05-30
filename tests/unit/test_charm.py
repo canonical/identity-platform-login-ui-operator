@@ -103,7 +103,7 @@ def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
                 "override": "replace",
                 "summary": "identity platform login ui",
                 "command": "identity_platform_login_ui",
-                "startup": "enabled",
+                "startup": "disabled",
                 "environment": {
                     "HYDRA_ADMIN_URL": "",
                     "KRATOS_PUBLIC_URL": "",
@@ -111,6 +111,16 @@ def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
                     "BASE_URL": None,
                 },
             }
+        },
+        "checks": {
+            "login-ui-ready": {
+                "override": "replace",
+                "http": {"url": f"http://localhost:{TEST_PORT}/health/ready"},
+            },
+            "login-ui-alive": {
+                "override": "replace",
+                "http": {"url": f"http://localhost:{TEST_PORT}/health/alive"},
+            },
         },
     }
 
@@ -132,7 +142,7 @@ def test_layer_updated_with_kratos_endpoint_info(harness: Harness) -> None:
                 "override": "replace",
                 "summary": "identity platform login ui",
                 "command": "identity_platform_login_ui",
-                "startup": "enabled",
+                "startup": "disabled",
                 "environment": {
                     "HYDRA_ADMIN_URL": "",
                     "KRATOS_PUBLIC_URL": harness.get_relation_data(kratos_relation_id, "kratos")[
@@ -142,6 +152,16 @@ def test_layer_updated_with_kratos_endpoint_info(harness: Harness) -> None:
                     "BASE_URL": None,
                 },
             }
+        },
+        "checks": {
+            "login-ui-ready": {
+                "override": "replace",
+                "http": {"url": f"http://localhost:{TEST_PORT}/health/ready"},
+            },
+            "login-ui-alive": {
+                "override": "replace",
+                "http": {"url": f"http://localhost:{TEST_PORT}/health/alive"},
+            },
         },
     }
 
@@ -163,7 +183,7 @@ def test_layer_updated_with_hydra_endpoint_info(harness: Harness) -> None:
                 "override": "replace",
                 "summary": "identity platform login ui",
                 "command": "identity_platform_login_ui",
-                "startup": "enabled",
+                "startup": "disabled",
                 "environment": {
                     "HYDRA_ADMIN_URL": harness.get_relation_data(hydra_relation_id, "hydra")[
                         "admin_endpoint"
@@ -173,6 +193,16 @@ def test_layer_updated_with_hydra_endpoint_info(harness: Harness) -> None:
                     "BASE_URL": None,
                 },
             }
+        },
+        "checks": {
+            "login-ui-ready": {
+                "override": "replace",
+                "http": {"url": f"http://localhost:{TEST_PORT}/health/ready"},
+            },
+            "login-ui-alive": {
+                "override": "replace",
+                "http": {"url": f"http://localhost:{TEST_PORT}/health/alive"},
+            },
         },
     }
 
@@ -195,7 +225,7 @@ def test_layer_updated_with_endpoint_info(harness: Harness) -> None:
                 "override": "replace",
                 "summary": "identity platform login ui",
                 "command": "identity_platform_login_ui",
-                "startup": "enabled",
+                "startup": "disabled",
                 "environment": {
                     "HYDRA_ADMIN_URL": harness.get_relation_data(hydra_relation_id, "hydra")[
                         "admin_endpoint"
@@ -207,6 +237,16 @@ def test_layer_updated_with_endpoint_info(harness: Harness) -> None:
                     "BASE_URL": None,
                 },
             }
+        },
+        "checks": {
+            "login-ui-ready": {
+                "override": "replace",
+                "http": {"url": f"http://localhost:{TEST_PORT}/health/ready"},
+            },
+            "login-ui-alive": {
+                "override": "replace",
+                "http": {"url": f"http://localhost:{TEST_PORT}/health/alive"},
+            },
         },
     }
 

@@ -138,7 +138,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                     "override": "replace",
                     "summary": "identity platform login ui",
                     "command": "identity_platform_login_ui",
-                    "startup": "enabled",
+                    "startup": "disabled",
                     "environment": {
                         "HYDRA_ADMIN_URL": self._get_hydra_endpoint_info(),
                         "KRATOS_PUBLIC_URL": self._get_kratos_endpoint_info(),
@@ -146,6 +146,16 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                         "BASE_URL": self._domain_url,
                     },
                 }
+            },
+            "checks": {
+                "login-ui-ready": {
+                    "override": "replace",
+                    "http": {"url": f"http://localhost:{APPLICATION_PORT}/health/ready"},
+                },
+                "login-ui-alive": {
+                    "override": "replace",
+                    "http": {"url": f"http://localhost:{APPLICATION_PORT}/health/alive"},
+                },
             },
         }
         return Layer(pebble_layer)
