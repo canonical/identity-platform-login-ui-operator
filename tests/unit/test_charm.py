@@ -23,7 +23,7 @@ def setup_ingress_relation(harness) -> int:
         "traefik",
         {"ingress": json.dumps({"url": url})},
     )
-    return relation_id
+    return relation_id, url
 
 
 def setup_kratos_relation(harness) -> int:
@@ -204,3 +204,18 @@ def test_layer_updated_with_endpoint_info(harness) -> None:
     }
 
     assert harness.charm._login_ui_layer.to_dict() == expected_layer
+
+
+def test_ui_endpoint_info(harness, mocker) -> None:
+    mocked_service_patcher = mocker.patch(
+        "charm.LoginUIEndpointsProvider.send_endpoints_relation_data"
+    )
+    harness.set_leader(True)
+    harness.set_can_connect(CONTAINER_NAME, True)
+    _, url = setup_ingress_relation(harness)
+    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
+
+    relation_id = harness.add_relation("ui-endpoint-info", "hydra")
+    harness.add_relation_unit(relation_id, "hydra/0")
+
+    mocked_service_patcher.assert_called_with(url.replace("http", "https").replace(":80", ""))

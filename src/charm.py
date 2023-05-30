@@ -6,6 +6,7 @@
 
 """A Juju charm for Identity Platform Login UI."""
 import logging
+from typing import Optional
 
 from charms.hydra.v0.hydra_endpoints import (
     HydraEndpointsRelationDataMissingError,
@@ -30,6 +31,8 @@ from ops.charm import CharmBase, ConfigChangedEvent, HookEvent, RelationEvent, W
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import ChangeError, Layer
+
+from utils import normalise_url
 
 APPLICATION_PORT = "8080"
 
@@ -121,6 +124,10 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self._update_login_ui_endpoint_relation_data(event)
 
     @property
+    def _domain_url(self) -> Optional[str]:
+        return normalise_url(self.ingress.url) if self.ingress.is_ready() else None
+
+    @property
     def _login_ui_layer(self) -> Layer:
         # Define Pebble layer configuration
         pebble_layer = {
@@ -154,7 +161,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         return ""
 
     def _update_login_ui_endpoint_relation_data(self, event: RelationEvent) -> None:
-        endpoint = self.ingress.url if self.ingress.is_ready() else ""
+        endpoint = self._domain_url or ""
         try:
             self.endpoints_provider.send_endpoints_relation_data(endpoint)
             logger.info(f"Sending login ui endpoint info: endpoint - {endpoint}")
