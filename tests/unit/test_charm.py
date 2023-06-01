@@ -105,6 +105,7 @@ def test_layer_updated_without_any_endpoint_info(harness) -> None:
                     "HYDRA_ADMIN_URL": "",
                     "KRATOS_PUBLIC_URL": "",
                     "PORT": TEST_PORT,
+                    "BASE_URL": None,
                 },
             }
         },
@@ -135,6 +136,7 @@ def test_layer_updated_with_kratos_endpoint_info(harness) -> None:
                         "public_endpoint"
                     ],
                     "PORT": TEST_PORT,
+                    "BASE_URL": None,
                 },
             }
         },
@@ -165,6 +167,7 @@ def test_layer_updated_with_hydra_endpoint_info(harness) -> None:
                     ],
                     "KRATOS_PUBLIC_URL": "",
                     "PORT": TEST_PORT,
+                    "BASE_URL": None,
                 },
             }
         },
@@ -198,6 +201,41 @@ def test_layer_updated_with_endpoint_info(harness) -> None:
                         "public_endpoint"
                     ],
                     "PORT": TEST_PORT,
+                    "BASE_URL": None,
+                },
+            }
+        },
+    }
+
+    assert harness.charm._login_ui_layer.to_dict() == expected_layer
+
+
+def test_layer_updated_with_ingress_ready(harness) -> None:
+    harness.set_leader(True)
+    harness.set_can_connect(CONTAINER_NAME, True)
+    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
+    hydra_relation_id = setup_hydra_relation(harness)
+    kratos_relation_id = setup_kratos_relation(harness)
+    _, url = setup_ingress_relation(harness)
+
+    expected_layer = {
+        "summary": "login_ui layer",
+        "description": "pebble config layer for identity platform login ui",
+        "services": {
+            CONTAINER_NAME: {
+                "override": "replace",
+                "summary": "identity platform login ui",
+                "command": "identity_platform_login_ui",
+                "startup": "enabled",
+                "environment": {
+                    "HYDRA_ADMIN_URL": harness.get_relation_data(hydra_relation_id, "hydra")[
+                        "admin_endpoint"
+                    ],
+                    "KRATOS_PUBLIC_URL": harness.get_relation_data(kratos_relation_id, "kratos")[
+                        "public_endpoint"
+                    ],
+                    "PORT": TEST_PORT,
+                    "BASE_URL": url.replace("http", "https").replace(":80", ""),
                 },
             }
         },
