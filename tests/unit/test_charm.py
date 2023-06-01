@@ -5,14 +5,17 @@
 
 """Test functions for unit testing Identity Platform Login UI Operator."""
 import json
+from typing import Tuple
 
 from ops.model import ActiveStatus, WaitingStatus
+from ops.testing import Harness
+from pytest_mock import MockerFixture
 
 CONTAINER_NAME = "login-ui"
 TEST_PORT = "8080"
 
 
-def setup_ingress_relation(harness) -> int:
+def setup_ingress_relation(harness: Harness) -> Tuple[int, str]:
     """Set up ingress relation."""
     harness.set_leader(True)
     relation_id = harness.add_relation("ingress", "traefik")
@@ -26,7 +29,7 @@ def setup_ingress_relation(harness) -> int:
     return relation_id, url
 
 
-def setup_kratos_relation(harness) -> int:
+def setup_kratos_relation(harness: Harness) -> int:
     relation_id = harness.add_relation("kratos-endpoint-info", "kratos")
     harness.add_relation_unit(relation_id, "kratos/0")
     harness.update_relation_data(
@@ -40,7 +43,7 @@ def setup_kratos_relation(harness) -> int:
     return relation_id
 
 
-def setup_hydra_relation(harness) -> int:
+def setup_hydra_relation(harness: Harness) -> int:
     relation_id = harness.add_relation("endpoint-info", "hydra")
     harness.add_relation_unit(relation_id, "hydra/0")
     harness.update_relation_data(
@@ -54,7 +57,7 @@ def setup_hydra_relation(harness) -> int:
     return relation_id
 
 
-def test_not_leader(harness) -> None:
+def test_not_leader(harness: Harness) -> None:
     """Test with unit not being leader."""
     harness.set_leader(False)
 
@@ -68,7 +71,7 @@ def test_not_leader(harness) -> None:
     ) in harness._get_backend_calls()
 
 
-def test_install_can_connect(harness) -> None:
+def test_install_can_connect(harness: Harness) -> None:
     """Test installation with connection."""
     harness.set_leader(True)
     harness.set_can_connect(CONTAINER_NAME, True)
@@ -77,7 +80,7 @@ def test_install_can_connect(harness) -> None:
     assert harness.charm.unit.status == ActiveStatus()
 
 
-def test_install_can_not_connect(harness) -> None:
+def test_install_can_not_connect(harness: Harness) -> None:
     """Test installation with connection."""
     harness.set_leader(True)
     harness.set_can_connect(CONTAINER_NAME, False)
@@ -86,7 +89,7 @@ def test_install_can_not_connect(harness) -> None:
     assert harness.charm.unit.status == WaitingStatus("Waiting to connect to Login_UI container")
 
 
-def test_layer_updated_without_any_endpoint_info(harness) -> None:
+def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
     """Test Pebble Layer after updates."""
     harness.set_leader(True)
     harness.set_can_connect(CONTAINER_NAME, True)
@@ -114,7 +117,7 @@ def test_layer_updated_without_any_endpoint_info(harness) -> None:
     assert harness.charm._login_ui_layer.to_dict() == expected_layer
 
 
-def test_layer_updated_with_kratos_endpoint_info(harness) -> None:
+def test_layer_updated_with_kratos_endpoint_info(harness: Harness) -> None:
     """Test Pebble Layer when relation data is in place."""
     harness.set_leader(True)
     harness.set_can_connect(CONTAINER_NAME, True)
@@ -145,7 +148,7 @@ def test_layer_updated_with_kratos_endpoint_info(harness) -> None:
     assert harness.charm._login_ui_layer.to_dict() == expected_layer
 
 
-def test_layer_updated_with_hydra_endpoint_info(harness) -> None:
+def test_layer_updated_with_hydra_endpoint_info(harness: Harness) -> None:
     """Test Pebble Layer when relation data is in place."""
     harness.set_leader(True)
     harness.set_can_connect(CONTAINER_NAME, True)
@@ -176,7 +179,7 @@ def test_layer_updated_with_hydra_endpoint_info(harness) -> None:
     assert harness.charm._login_ui_layer.to_dict() == expected_layer
 
 
-def test_layer_updated_with_endpoint_info(harness) -> None:
+def test_layer_updated_with_endpoint_info(harness: Harness) -> None:
     """Test Pebble Layer when relation data is in place."""
     harness.set_leader(True)
     harness.set_can_connect(CONTAINER_NAME, True)
@@ -210,7 +213,7 @@ def test_layer_updated_with_endpoint_info(harness) -> None:
     assert harness.charm._login_ui_layer.to_dict() == expected_layer
 
 
-def test_layer_updated_with_ingress_ready(harness) -> None:
+def test_layer_updated_with_ingress_ready(harness: Harness) -> None:
     harness.set_leader(True)
     harness.set_can_connect(CONTAINER_NAME, True)
     harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
@@ -244,7 +247,7 @@ def test_layer_updated_with_ingress_ready(harness) -> None:
     assert harness.charm._login_ui_layer.to_dict() == expected_layer
 
 
-def test_ui_endpoint_info(harness, mocker) -> None:
+def test_ui_endpoint_info(harness: Harness, mocker: MockerFixture) -> None:
     mocked_service_patcher = mocker.patch(
         "charm.LoginUIEndpointsProvider.send_endpoints_relation_data"
     )
