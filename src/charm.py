@@ -138,7 +138,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                     "override": "replace",
                     "summary": "identity platform login ui",
                     "command": "identity_platform_login_ui",
-                    "startup": "disabled",
+                    "startup": "enabled",
                     "environment": {
                         "HYDRA_ADMIN_URL": self._get_hydra_endpoint_info(),
                         "KRATOS_PUBLIC_URL": self._get_kratos_endpoint_info(),
