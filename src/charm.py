@@ -143,6 +143,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                         "HYDRA_ADMIN_URL": self._get_hydra_endpoint_info(),
                         "KRATOS_PUBLIC_URL": self._get_kratos_endpoint_info(),
                         "PORT": APPLICATION_PORT,
+                        "BASE_URL": self._domain_url,
                     },
                 }
             },
