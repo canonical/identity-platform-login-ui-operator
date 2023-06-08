@@ -148,10 +148,6 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                 }
             },
             "checks": {
-                "login-ui-ready": {
-                    "override": "replace",
-                    "http": {"url": f"http://localhost:{APPLICATION_PORT}/health/ready"},
-                },
                 "login-ui-alive": {
                     "override": "replace",
                     "http": {"url": f"http://localhost:{APPLICATION_PORT}/health/alive"},

@@ -113,10 +113,6 @@ def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
             }
         },
         "checks": {
-            "login-ui-ready": {
-                "override": "replace",
-                "http": {"url": f"http://localhost:{TEST_PORT}/health/ready"},
-            },
             "login-ui-alive": {
                 "override": "replace",
                 "http": {"url": f"http://localhost:{TEST_PORT}/health/alive"},
@@ -154,10 +150,6 @@ def test_layer_updated_with_kratos_endpoint_info(harness: Harness) -> None:
             }
         },
         "checks": {
-            "login-ui-ready": {
-                "override": "replace",
-                "http": {"url": f"http://localhost:{TEST_PORT}/health/ready"},
-            },
             "login-ui-alive": {
                 "override": "replace",
                 "http": {"url": f"http://localhost:{TEST_PORT}/health/alive"},
@@ -195,10 +187,6 @@ def test_layer_updated_with_hydra_endpoint_info(harness: Harness) -> None:
             }
         },
         "checks": {
-            "login-ui-ready": {
-                "override": "replace",
-                "http": {"url": f"http://localhost:{TEST_PORT}/health/ready"},
-            },
             "login-ui-alive": {
                 "override": "replace",
                 "http": {"url": f"http://localhost:{TEST_PORT}/health/alive"},
@@ -239,10 +227,6 @@ def test_layer_updated_with_endpoint_info(harness: Harness) -> None:
             }
         },
         "checks": {
-            "login-ui-ready": {
-                "override": "replace",
-                "http": {"url": f"http://localhost:{TEST_PORT}/health/ready"},
-            },
             "login-ui-alive": {
                 "override": "replace",
                 "http": {"url": f"http://localhost:{TEST_PORT}/health/alive"},
