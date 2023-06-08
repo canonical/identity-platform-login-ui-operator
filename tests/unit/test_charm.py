@@ -266,6 +266,12 @@ def test_layer_updated_with_ingress_ready(harness: Harness) -> None:
                 },
             }
         },
+        "checks": {
+            "login-ui-alive": {
+                "override": "replace",
+                "http": {"url": f"http://localhost:{TEST_PORT}/health/alive"},
+            },
+        },
     }
 
     assert harness.charm._login_ui_layer.to_dict() == expected_layer
