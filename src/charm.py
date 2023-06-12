@@ -147,6 +147,12 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                     },
                 }
             },
+            "checks": {
+                "login-ui-alive": {
+                    "override": "replace",
+                    "http": {"url": f"http://localhost:{APPLICATION_PORT}/health/alive"},
+                },
+            },
         }
         return Layer(pebble_layer)
 

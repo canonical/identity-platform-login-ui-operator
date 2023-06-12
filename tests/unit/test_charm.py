@@ -112,6 +112,12 @@ def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
                 },
             }
         },
+        "checks": {
+            "login-ui-alive": {
+                "override": "replace",
+                "http": {"url": f"http://localhost:{TEST_PORT}/health/alive"},
+            },
+        },
     }
 
     assert harness.charm._login_ui_layer.to_dict() == expected_layer
@@ -143,6 +149,12 @@ def test_layer_updated_with_kratos_endpoint_info(harness: Harness) -> None:
                 },
             }
         },
+        "checks": {
+            "login-ui-alive": {
+                "override": "replace",
+                "http": {"url": f"http://localhost:{TEST_PORT}/health/alive"},
+            },
+        },
     }
 
     assert harness.charm._login_ui_layer.to_dict() == expected_layer
@@ -173,6 +185,12 @@ def test_layer_updated_with_hydra_endpoint_info(harness: Harness) -> None:
                     "BASE_URL": None,
                 },
             }
+        },
+        "checks": {
+            "login-ui-alive": {
+                "override": "replace",
+                "http": {"url": f"http://localhost:{TEST_PORT}/health/alive"},
+            },
         },
     }
 
@@ -208,6 +226,12 @@ def test_layer_updated_with_endpoint_info(harness: Harness) -> None:
                 },
             }
         },
+        "checks": {
+            "login-ui-alive": {
+                "override": "replace",
+                "http": {"url": f"http://localhost:{TEST_PORT}/health/alive"},
+            },
+        },
     }
 
     assert harness.charm._login_ui_layer.to_dict() == expected_layer
@@ -241,6 +265,12 @@ def test_layer_updated_with_ingress_ready(harness: Harness) -> None:
                     "BASE_URL": url.replace("http", "https").replace(":80", ""),
                 },
             }
+        },
+        "checks": {
+            "login-ui-alive": {
+                "override": "replace",
+                "http": {"url": f"http://localhost:{TEST_PORT}/health/alive"},
+            },
         },
     }
 
