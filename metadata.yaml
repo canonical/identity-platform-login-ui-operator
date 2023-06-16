@@ -30,9 +30,16 @@ requires:
   endpoint-info:
     interface: hydra_endpoints
     limit: 1
+  logging:
+    interface: loki_push_api
+    limit: 1
 
 provides:
   ui-endpoint-info:
     interface: login_ui_endpoints
     description: |
       Provides the Identity Platform Login UI API endpoints to a related application
+  metrics-endpoint:
+    interface: prometheus_scrape
+    description: |
+      Provides application metrics to COS Prometheus instance

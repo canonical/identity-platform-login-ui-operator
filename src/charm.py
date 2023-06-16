@@ -6,6 +6,7 @@
 
 """A Juju charm for Identity Platform Login UI."""
 import logging
+from pathlib import Path
 from typing import Optional
 
 from charms.hydra.v0.hydra_endpoints import (
@@ -21,7 +22,9 @@ from charms.kratos.v0.kratos_endpoints import (
     KratosEndpointsRelationDataMissingError,
     KratosEndpointsRequirer,
 )
+from charms.loki_k8s.v0.loki_push_api import LogProxyConsumer, PromtailDigestError
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
+from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.traefik_k8s.v1.ingress import (
     IngressPerAppReadyEvent,
     IngressPerAppRequirer,
@@ -50,6 +53,11 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self._container = self.unit.get_container(self._container_name)
         self._hydra_relation_name = "endpoint-info"
         self._kratos_relation_name = "kratos-endpoint-info"
+        self._prometheus_scrape_relation_name = "metrics-endpoint"
+        self._loki_push_api_relation_name = "logging"
+        self._login_ui_service_command = "identity_platform_login_ui"
+        self._log_dir = Path("/var/log")
+        self._log_path = self._log_dir / "login_ui.log"
 
         self.service_patcher = KubernetesServicePatch(
             self, [("identity-platform-login-ui", int(APPLICATION_PORT))]
@@ -69,6 +77,28 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         )
         self.endpoints_provider = LoginUIEndpointsProvider(self)
 
+        self.metrics_endpoint = MetricsEndpointProvider(
+            self,
+            relation_name=self._prometheus_scrape_relation_name,
+            jobs=[
+                {
+                    "metrics_path": "/metrics/prometheus",
+                    "static_configs": [
+                        {
+                            "targets": [f"*:{APPLICATION_PORT}"],
+                        }
+                    ],
+                }
+            ],
+        )
+
+        self.loki_consumer = LogProxyConsumer(
+            self,
+            log_files=[str(self._log_path)],
+            relation_name=self._loki_push_api_relation_name,
+            container_name=self._container_name,
+        )
+
         self.framework.observe(self.on.login_ui_pebble_ready, self._on_login_ui_pebble_ready)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(
@@ -83,8 +113,21 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self.framework.observe(self.ingress.on.ready, self._on_ingress_ready)
         self.framework.observe(self.ingress.on.revoked, self._on_ingress_revoked)
 
+        self.framework.observe(
+            self.loki_consumer.on.promtail_digest_error,
+            self._promtail_error,
+        )
+
     def _on_login_ui_pebble_ready(self, event: WorkloadEvent) -> None:
         """Define and start a workload using the Pebble API."""
+        # Necessary directory for log forwarding
+        if not self._container.can_connect():
+            event.defer()
+            logger.info("Cannot connect to Login UI container. Deferring event.")
+            self.unit.status = WaitingStatus("Waiting to connect to Login_UI container")
+            return
+        if not self._container.isdir(str(self._log_dir)):
+            self._container.make_dir(path=str(self._log_dir), make_parents=True)
         self._update_pebble_layer(event)
 
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:
@@ -185,6 +228,9 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         except HydraEndpointsRelationMissingError:
             logger.info("No hydra endpoint-info relation found")
         return hydra_url
+
+    def _promtail_error(self, event: PromtailDigestError) -> None:
+        logger.error(event.message)
 
 
 if __name__ == "__main__":  # pragma: nocover
