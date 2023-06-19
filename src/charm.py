@@ -123,11 +123,12 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         # Necessary directory for log forwarding
         if not self._container.can_connect():
             event.defer()
-            logger.info("Cannot connect to Login UI container. Deferring event.")
             self.unit.status = WaitingStatus("Waiting to connect to Login_UI container")
             return
         if not self._container.isdir(str(self._log_dir)):
             self._container.make_dir(path=str(self._log_dir), make_parents=True)
+            logger.info(f"Created directory {self._log_dir}")
+
         self._update_pebble_layer(event)
 
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:

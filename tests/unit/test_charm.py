@@ -57,6 +57,40 @@ def setup_hydra_relation(harness: Harness) -> int:
     return relation_id
 
 
+def setup_loki_relation(harness: Harness) -> int:
+    relation_id = harness.add_relation("logging", "loki-k8s")
+    harness.add_relation_unit(relation_id, "loki-k8s/0")
+    databag = {
+        "promtail_binary_zip_url": json.dumps(
+            {
+                "amd64": {
+                    "filename": "promtail-static-amd64",
+                    "zipsha": "543e333b0184e14015a42c3c9e9e66d2464aaa66eca48b29e185a6a18f67ab6d",
+                    "binsha": "17e2e271e65f793a9fbe81eab887b941e9d680abe82d5a0602888c50f5e0cac9",
+                    "url": "https://github.com/canonical/loki-k8s-operator/releases/download/promtail-v2.5.0/promtail-static-amd64.gz",
+                }
+            }
+        ),
+    }
+    unit_databag = {
+        "endpoint": json.dumps(
+            {
+                "url": "http://loki-k8s-0.loki-k8s-endpoints.model0.svc.cluster.local:3100/loki/api/v1/push"
+            }
+        )
+    }
+    harness.update_relation_data(
+        relation_id,
+        "loki-k8s/0",
+        unit_databag,
+    )
+    harness.update_relation_data(
+        relation_id,
+        "loki-k8s",
+        databag,
+    )
+
+
 def test_not_leader(harness: Harness) -> None:
     """Test with unit not being leader."""
     harness.set_leader(False)
@@ -290,3 +324,20 @@ def test_ui_endpoint_info(harness: Harness, mocker: MockerFixture) -> None:
     harness.add_relation_unit(relation_id, "hydra/0")
 
     mocked_service_patcher.assert_called_with(url.replace("http", "https").replace(":80", ""))
+
+
+def test_on_pebble_ready_with_loki(harness: Harness) -> None:
+    harness.set_leader(True)
+    harness.set_can_connect(CONTAINER_NAME, True)
+    container = harness.model.unit.get_container(CONTAINER_NAME)
+    harness.charm.on.login_ui_pebble_ready.emit(container)
+    setup_loki_relation(harness)
+
+    assert harness.model.unit.status == ActiveStatus()
+
+
+def test_on_pebble_ready_make_dir_called(harness: Harness) -> None:
+    harness.set_can_connect(CONTAINER_NAME, True)
+    container = harness.model.unit.get_container(CONTAINER_NAME)
+    harness.charm.on.login_ui_pebble_ready.emit(container)
+    assert container.isdir("/var/log")
