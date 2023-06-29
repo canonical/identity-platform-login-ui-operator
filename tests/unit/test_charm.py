@@ -153,7 +153,7 @@ def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
         "checks": {
             "login-ui-alive": {
                 "override": "replace",
-                "http": {"url": f"http://localhost:{TEST_PORT}/health/alive"},
+                "http": {"url": f"http://localhost:{TEST_PORT}/api/v0/status"},
             },
         },
     }
