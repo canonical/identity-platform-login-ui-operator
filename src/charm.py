@@ -37,6 +37,8 @@ from ops.pebble import ChangeError, Layer
 
 from utils import normalise_url
 
+
+
 APPLICATION_PORT = "8080"
 
 
@@ -56,8 +58,8 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self._prometheus_scrape_relation_name = "metrics-endpoint"
         self._loki_push_api_relation_name = "logging"
         self._login_ui_service_command = "identity_platform_login_ui"
-        self._log_dir = Path("/var/log")
-        self._log_path = self._log_dir / "login_ui.log"
+        self._log_dir = Path("/var/log/ui")
+        self._log_path = self._log_dir / "ui.log"
 
         self.service_patcher = KubernetesServicePatch(
             self, [("identity-platform-login-ui", int(APPLICATION_PORT))]
@@ -82,7 +84,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             relation_name=self._prometheus_scrape_relation_name,
             jobs=[
                 {
-                    "metrics_path": "/metrics/prometheus",
+                    "metrics_path": "/api/v0/metrics",
                     "static_configs": [
                         {
                             "targets": [f"*:{APPLICATION_PORT}"],
@@ -196,6 +198,10 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                         "KRATOS_PUBLIC_URL": self._get_kratos_endpoint_info(),
                         "PORT": APPLICATION_PORT,
                         "BASE_URL": self._domain_url,
+                        "JAEGER_ENDPOINT": "", # TODO @shipperizer this will be populated when tempo is setup by COS and passed via the integration 
+                        "TRACING_ENABLED": self._tracing_enabled,
+                        "LOG_LEVEL": self._log_level,
+                        "LOG_FILE": self._log_path,
                     },
                 }
             },

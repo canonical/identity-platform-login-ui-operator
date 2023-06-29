@@ -143,6 +143,10 @@ def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
                     "KRATOS_PUBLIC_URL": "",
                     "PORT": TEST_PORT,
                     "BASE_URL": None,
+                    "JAEGER_ENDPOINT": "",
+                    "TRACING_ENABLED": harness.charm._tracing_enabled,
+                    "LOG_LEVEL": harness.charm._log_level,
+                    "LOG_FILE": harness.charm._log_path,
                 },
             }
         },
