@@ -5,8 +5,13 @@
 
 options:
   # An example config option to customise the log level of the workload
-  log-level:
+  log_level:
     description: |
       Acceptable values are: "info", "debug", "warning", "error" and "critical"
     default: "info"
     type: string
+  tracing_enabled:
+    description: |
+      Acceptable values are: 0 for false and anything else for true
+    default: True
+    type: boolean

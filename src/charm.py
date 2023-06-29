@@ -168,6 +168,14 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self._update_login_ui_endpoint_relation_data(event)
 
     @property
+    def _log_level(self) -> str:
+        return self.config["log_level"]
+
+    @property
+    def _tracing_enabled(self) -> bool:
+        return self.config["tracing_enabled"]
+
+    @property
     def _domain_url(self) -> Optional[str]:
         return normalise_url(self.ingress.url) if self.ingress.is_ready() else None
 
