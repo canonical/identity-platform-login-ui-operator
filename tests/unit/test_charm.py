@@ -102,7 +102,7 @@ def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
             CONTAINER_NAME: {
                 "override": "replace",
                 "summary": "identity platform login ui",
-                "command": "identity_platform_login_ui",
+                "command": "identity-platform-login-ui",
                 "startup": "enabled",
                 "environment": {
                     "HYDRA_ADMIN_URL": "",
@@ -137,7 +137,7 @@ def test_layer_updated_with_kratos_endpoint_info(harness: Harness) -> None:
             CONTAINER_NAME: {
                 "override": "replace",
                 "summary": "identity platform login ui",
-                "command": "identity_platform_login_ui",
+                "command": "identity-platform-login-ui",
                 "startup": "enabled",
                 "environment": {
                     "HYDRA_ADMIN_URL": "",
@@ -174,7 +174,7 @@ def test_layer_updated_with_hydra_endpoint_info(harness: Harness) -> None:
             CONTAINER_NAME: {
                 "override": "replace",
                 "summary": "identity platform login ui",
-                "command": "identity_platform_login_ui",
+                "command": "identity-platform-login-ui",
                 "startup": "enabled",
                 "environment": {
                     "HYDRA_ADMIN_URL": harness.get_relation_data(hydra_relation_id, "hydra")[
@@ -212,7 +212,7 @@ def test_layer_updated_with_endpoint_info(harness: Harness) -> None:
             CONTAINER_NAME: {
                 "override": "replace",
                 "summary": "identity platform login ui",
-                "command": "identity_platform_login_ui",
+                "command": "identity-platform-login-ui",
                 "startup": "enabled",
                 "environment": {
                     "HYDRA_ADMIN_URL": harness.get_relation_data(hydra_relation_id, "hydra")[
@@ -252,7 +252,7 @@ def test_layer_updated_with_ingress_ready(harness: Harness) -> None:
             CONTAINER_NAME: {
                 "override": "replace",
                 "summary": "identity platform login ui",
-                "command": "identity_platform_login_ui",
+                "command": "identity-platform-login-ui",
                 "startup": "enabled",
                 "environment": {
                     "HYDRA_ADMIN_URL": harness.get_relation_data(hydra_relation_id, "hydra")[

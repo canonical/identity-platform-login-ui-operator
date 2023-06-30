@@ -137,7 +137,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                 self._container_name: {
                     "override": "replace",
                     "summary": "identity platform login ui",
-                    "command": "identity_platform_login_ui",
+                    "command": "identity-platform-login-ui",
                     "startup": "enabled",
                     "environment": {
                         "HYDRA_ADMIN_URL": self._get_hydra_endpoint_info(),
