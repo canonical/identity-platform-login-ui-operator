@@ -136,7 +136,7 @@ def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
             CONTAINER_NAME: {
                 "override": "replace",
                 "summary": "identity platform login ui",
-                "command": "identity-platform-login-ui",
+                "command": harness.charm._login_ui_service_command,
                 "startup": "enabled",
                 "environment": {
                     "HYDRA_ADMIN_URL": "",

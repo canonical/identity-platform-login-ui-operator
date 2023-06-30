@@ -37,8 +37,6 @@ from ops.pebble import ChangeError, Layer
 
 from utils import normalise_url
 
-
-
 APPLICATION_PORT = "8080"
 
 
@@ -57,8 +55,8 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self._kratos_relation_name = "kratos-endpoint-info"
         self._prometheus_scrape_relation_name = "metrics-endpoint"
         self._loki_push_api_relation_name = "logging"
-        self._login_ui_service_command = "identity_platform_login_ui"
-        self._log_dir = Path("/var/log/ui")
+        self._login_ui_service_command = "/usr/bin/identity-platform-login-ui"
+        self._log_dir = Path("/var/log")
         self._log_path = self._log_dir / "ui.log"
 
         self.service_patcher = KubernetesServicePatch(
@@ -103,6 +101,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
         self.framework.observe(self.on.login_ui_pebble_ready, self._on_login_ui_pebble_ready)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+
         self.framework.observe(
             self.on[self._kratos_relation_name].relation_changed, self._update_pebble_layer
         )
@@ -127,9 +126,6 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             event.defer()
             self.unit.status = WaitingStatus("Waiting to connect to Login_UI container")
             return
-        if not self._container.isdir(str(self._log_dir)):
-            self._container.make_dir(path=str(self._log_dir), make_parents=True)
-            logger.info(f"Created directory {self._log_dir}")
 
         self._update_pebble_layer(event)
 
@@ -191,14 +187,16 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                 self._container_name: {
                     "override": "replace",
                     "summary": "identity platform login ui",
-                    "command": "identity-platform-login-ui",
+                    "command": self._login_ui_service_command,
                     "startup": "enabled",
                     "environment": {
                         "HYDRA_ADMIN_URL": self._get_hydra_endpoint_info(),
                         "KRATOS_PUBLIC_URL": self._get_kratos_endpoint_info(),
                         "PORT": APPLICATION_PORT,
                         "BASE_URL": self._domain_url,
-                        "JAEGER_ENDPOINT": "", # TODO @shipperizer this will be populated when tempo is setup by COS and passed via the integration 
+                        # TODO @shipperizer this will be populated when tempo is setup
+                        # by COS and passed via the integration
+                        "JAEGER_ENDPOINT": "",
                         "TRACING_ENABLED": self._tracing_enabled,
                         "LOG_LEVEL": self._log_level,
                         "LOG_FILE": self._log_path,
