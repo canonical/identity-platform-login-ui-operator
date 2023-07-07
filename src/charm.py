@@ -6,7 +6,6 @@
 
 """A Juju charm for Identity Platform Login UI."""
 import logging
-from pathlib import Path
 from typing import Optional
 
 from charms.hydra.v0.hydra_endpoints import (
@@ -56,8 +55,8 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self._prometheus_scrape_relation_name = "metrics-endpoint"
         self._loki_push_api_relation_name = "logging"
         self._login_ui_service_command = "/usr/bin/identity-platform-login-ui"
-        self._log_dir = Path("/var/log")
-        self._log_path = self._log_dir / "ui.log"
+        self._log_dir = "/var/log"
+        self._log_path = f"{self._log_dir}/ui.log"
 
         self.service_patcher = KubernetesServicePatch(
             self, [("identity-platform-login-ui", int(APPLICATION_PORT))]
@@ -94,7 +93,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
         self.loki_consumer = LogProxyConsumer(
             self,
-            log_files=[str(self._log_path)],
+            log_files=[self._log_path],
             relation_name=self._loki_push_api_relation_name,
             container_name=self._container_name,
         )
@@ -126,6 +125,10 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             event.defer()
             self.unit.status = WaitingStatus("Waiting to connect to Login_UI container")
             return
+
+        if not self._container.isdir(self._log_dir):
+            self._container.make_dir(path=self._log_dir, make_parents=True)
+            logger.info(f"Created directory {self._log_dir}")
 
         self._update_pebble_layer(event)
 
