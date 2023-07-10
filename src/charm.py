@@ -29,7 +29,14 @@ from charms.traefik_k8s.v1.ingress import (
     IngressPerAppRequirer,
     IngressPerAppRevokedEvent,
 )
-from ops.charm import CharmBase, ConfigChangedEvent, HookEvent, RelationEvent, WorkloadEvent
+from ops.charm import (
+    CharmBase,
+    ConfigChangedEvent,
+    HookEvent,
+    InstallEvent,
+    RelationEvent,
+    WorkloadEvent,
+)
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import ChangeError, Layer
@@ -100,6 +107,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
         self.framework.observe(self.on.login_ui_pebble_ready, self._on_login_ui_pebble_ready)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.on.install, self._on_install)
 
         self.framework.observe(
             self.on[self._kratos_relation_name].relation_changed, self._update_pebble_layer
@@ -131,6 +139,17 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             logger.info(f"Created directory {self._log_dir}")
 
         self._update_pebble_layer(event)
+
+    def _on_install(self, event: InstallEvent) -> None:
+        if not self._container.can_connect():
+            event.defer()
+            logger.info("Cannot connect to Login_UI container. Deferring the event.")
+            self.unit.status = WaitingStatus("Waiting to connect to Login_UI container")
+            return
+
+        if not self._container.isdir(self._log_dir):
+            self._container.make_dir(path=self._log_dir, make_parents=True)
+            logger.info(f"Created directory {self._log_dir}")
 
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:
         """Handle changed configuration."""
