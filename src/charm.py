@@ -6,7 +6,6 @@
 
 """A Juju charm for Identity Platform Login UI."""
 import logging
-from pathlib import Path
 from typing import Optional
 
 from charms.hydra.v0.hydra_endpoints import (
@@ -30,7 +29,14 @@ from charms.traefik_k8s.v1.ingress import (
     IngressPerAppRequirer,
     IngressPerAppRevokedEvent,
 )
-from ops.charm import CharmBase, ConfigChangedEvent, HookEvent, RelationEvent, WorkloadEvent
+from ops.charm import (
+    CharmBase,
+    ConfigChangedEvent,
+    HookEvent,
+    InstallEvent,
+    RelationEvent,
+    WorkloadEvent,
+)
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import ChangeError, Layer
@@ -55,9 +61,9 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self._kratos_relation_name = "kratos-endpoint-info"
         self._prometheus_scrape_relation_name = "metrics-endpoint"
         self._loki_push_api_relation_name = "logging"
-        self._login_ui_service_command = "identity_platform_login_ui"
-        self._log_dir = Path("/var/log")
-        self._log_path = self._log_dir / "login_ui.log"
+        self._login_ui_service_command = "/usr/bin/identity-platform-login-ui"
+        self._log_dir = "/var/log"
+        self._log_path = f"{self._log_dir}/ui.log"
 
         self.service_patcher = KubernetesServicePatch(
             self, [("identity-platform-login-ui", int(APPLICATION_PORT))]
@@ -82,7 +88,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             relation_name=self._prometheus_scrape_relation_name,
             jobs=[
                 {
-                    "metrics_path": "/metrics/prometheus",
+                    "metrics_path": "/api/v0/metrics",
                     "static_configs": [
                         {
                             "targets": [f"*:{APPLICATION_PORT}"],
@@ -94,13 +100,15 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
         self.loki_consumer = LogProxyConsumer(
             self,
-            log_files=[str(self._log_path)],
+            log_files=[self._log_path],
             relation_name=self._loki_push_api_relation_name,
             container_name=self._container_name,
         )
 
         self.framework.observe(self.on.login_ui_pebble_ready, self._on_login_ui_pebble_ready)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.on.install, self._on_install)
+
         self.framework.observe(
             self.on[self._kratos_relation_name].relation_changed, self._update_pebble_layer
         )
@@ -125,11 +133,23 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             event.defer()
             self.unit.status = WaitingStatus("Waiting to connect to Login_UI container")
             return
-        if not self._container.isdir(str(self._log_dir)):
-            self._container.make_dir(path=str(self._log_dir), make_parents=True)
+
+        if not self._container.isdir(self._log_dir):
+            self._container.make_dir(path=self._log_dir, make_parents=True)
             logger.info(f"Created directory {self._log_dir}")
 
         self._update_pebble_layer(event)
+
+    def _on_install(self, event: InstallEvent) -> None:
+        if not self._container.can_connect():
+            event.defer()
+            logger.info("Cannot connect to Login_UI container. Deferring the event.")
+            self.unit.status = WaitingStatus("Waiting to connect to Login_UI container")
+            return
+
+        if not self._container.isdir(self._log_dir):
+            self._container.make_dir(path=self._log_dir, make_parents=True)
+            logger.info(f"Created directory {self._log_dir}")
 
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:
         """Handle changed configuration."""
@@ -168,6 +188,14 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self._update_login_ui_endpoint_relation_data(event)
 
     @property
+    def _log_level(self) -> str:
+        return self.config["log_level"]
+
+    @property
+    def _tracing_enabled(self) -> bool:
+        return self.config["tracing_enabled"]
+
+    @property
     def _domain_url(self) -> Optional[str]:
         return normalise_url(self.ingress.url) if self.ingress.is_ready() else None
 
@@ -181,20 +209,26 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                 self._container_name: {
                     "override": "replace",
                     "summary": "identity platform login ui",
-                    "command": "identity-platform-login-ui",
+                    "command": self._login_ui_service_command,
                     "startup": "enabled",
                     "environment": {
                         "HYDRA_ADMIN_URL": self._get_hydra_endpoint_info(),
                         "KRATOS_PUBLIC_URL": self._get_kratos_endpoint_info(),
                         "PORT": APPLICATION_PORT,
                         "BASE_URL": self._domain_url,
+                        # TODO @shipperizer this will be populated when tempo is setup
+                        # by COS and passed via the integration
+                        "JAEGER_ENDPOINT": "",
+                        "TRACING_ENABLED": self._tracing_enabled,
+                        "LOG_LEVEL": self._log_level,
+                        "LOG_FILE": self._log_path,
                     },
                 }
             },
             "checks": {
                 "login-ui-alive": {
                     "override": "replace",
-                    "http": {"url": f"http://localhost:{APPLICATION_PORT}/health/alive"},
+                    "http": {"url": f"http://localhost:{APPLICATION_PORT}/api/v0/status"},
                 },
             },
         }

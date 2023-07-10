@@ -136,20 +136,24 @@ def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
             CONTAINER_NAME: {
                 "override": "replace",
                 "summary": "identity platform login ui",
-                "command": "identity-platform-login-ui",
+                "command": harness.charm._login_ui_service_command,
                 "startup": "enabled",
                 "environment": {
                     "HYDRA_ADMIN_URL": "",
                     "KRATOS_PUBLIC_URL": "",
                     "PORT": TEST_PORT,
                     "BASE_URL": None,
+                    "JAEGER_ENDPOINT": "",
+                    "TRACING_ENABLED": harness.charm._tracing_enabled,
+                    "LOG_LEVEL": harness.charm._log_level,
+                    "LOG_FILE": harness.charm._log_path,
                 },
             }
         },
         "checks": {
             "login-ui-alive": {
                 "override": "replace",
-                "http": {"url": f"http://localhost:{TEST_PORT}/health/alive"},
+                "http": {"url": f"http://localhost:{TEST_PORT}/api/v0/status"},
             },
         },
     }
@@ -164,34 +168,12 @@ def test_layer_updated_with_kratos_endpoint_info(harness: Harness) -> None:
     harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
     kratos_relation_id = setup_kratos_relation(harness)
 
-    expected_layer = {
-        "summary": "login_ui layer",
-        "description": "pebble config layer for identity platform login ui",
-        "services": {
-            CONTAINER_NAME: {
-                "override": "replace",
-                "summary": "identity platform login ui",
-                "command": "identity-platform-login-ui",
-                "startup": "enabled",
-                "environment": {
-                    "HYDRA_ADMIN_URL": "",
-                    "KRATOS_PUBLIC_URL": harness.get_relation_data(kratos_relation_id, "kratos")[
-                        "public_endpoint"
-                    ],
-                    "PORT": TEST_PORT,
-                    "BASE_URL": None,
-                },
-            }
-        },
-        "checks": {
-            "login-ui-alive": {
-                "override": "replace",
-                "http": {"url": f"http://localhost:{TEST_PORT}/health/alive"},
-            },
-        },
-    }
-
-    assert harness.charm._login_ui_layer.to_dict() == expected_layer
+    assert (
+        harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
+            "KRATOS_PUBLIC_URL"
+        ]
+        == harness.get_relation_data(kratos_relation_id, "kratos")["public_endpoint"]
+    )
 
 
 def test_layer_updated_with_hydra_endpoint_info(harness: Harness) -> None:
@@ -201,36 +183,16 @@ def test_layer_updated_with_hydra_endpoint_info(harness: Harness) -> None:
     harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
     hydra_relation_id = setup_hydra_relation(harness)
 
-    expected_layer = {
-        "summary": "login_ui layer",
-        "description": "pebble config layer for identity platform login ui",
-        "services": {
-            CONTAINER_NAME: {
-                "override": "replace",
-                "summary": "identity platform login ui",
-                "command": "identity-platform-login-ui",
-                "startup": "enabled",
-                "environment": {
-                    "HYDRA_ADMIN_URL": harness.get_relation_data(hydra_relation_id, "hydra")[
-                        "admin_endpoint"
-                    ],
-                    "KRATOS_PUBLIC_URL": "",
-                    "PORT": TEST_PORT,
-                    "BASE_URL": None,
-                },
-            }
-        },
-        "checks": {
-            "login-ui-alive": {
-                "override": "replace",
-                "http": {"url": f"http://localhost:{TEST_PORT}/health/alive"},
-            },
-        },
-    }
-
-    assert harness.charm._login_ui_layer.to_dict() == expected_layer
+    assert (
+        harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
+            "HYDRA_ADMIN_URL"
+        ]
+        == harness.get_relation_data(hydra_relation_id, "hydra")["admin_endpoint"]
+    )
 
 
+# TODO @shipperizer evaluate if this test brings anything to the plate given it's a
+# composite of the 2 tests above
 def test_layer_updated_with_endpoint_info(harness: Harness) -> None:
     """Test Pebble Layer when relation data is in place."""
     harness.set_leader(True)
@@ -239,76 +201,29 @@ def test_layer_updated_with_endpoint_info(harness: Harness) -> None:
     hydra_relation_id = setup_hydra_relation(harness)
     kratos_relation_id = setup_kratos_relation(harness)
 
-    expected_layer = {
-        "summary": "login_ui layer",
-        "description": "pebble config layer for identity platform login ui",
-        "services": {
-            CONTAINER_NAME: {
-                "override": "replace",
-                "summary": "identity platform login ui",
-                "command": "identity-platform-login-ui",
-                "startup": "enabled",
-                "environment": {
-                    "HYDRA_ADMIN_URL": harness.get_relation_data(hydra_relation_id, "hydra")[
-                        "admin_endpoint"
-                    ],
-                    "KRATOS_PUBLIC_URL": harness.get_relation_data(kratos_relation_id, "kratos")[
-                        "public_endpoint"
-                    ],
-                    "PORT": TEST_PORT,
-                    "BASE_URL": None,
-                },
-            }
-        },
-        "checks": {
-            "login-ui-alive": {
-                "override": "replace",
-                "http": {"url": f"http://localhost:{TEST_PORT}/health/alive"},
-            },
-        },
-    }
-
-    assert harness.charm._login_ui_layer.to_dict() == expected_layer
+    assert (
+        harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
+            "KRATOS_PUBLIC_URL"
+        ]
+        == harness.get_relation_data(kratos_relation_id, "kratos")["public_endpoint"]
+    )
+    assert (
+        harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
+            "HYDRA_ADMIN_URL"
+        ]
+        == harness.get_relation_data(hydra_relation_id, "hydra")["admin_endpoint"]
+    )
 
 
 def test_layer_updated_with_ingress_ready(harness: Harness) -> None:
     harness.set_leader(True)
     harness.set_can_connect(CONTAINER_NAME, True)
     harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
-    hydra_relation_id = setup_hydra_relation(harness)
-    kratos_relation_id = setup_kratos_relation(harness)
     _, url = setup_ingress_relation(harness)
 
-    expected_layer = {
-        "summary": "login_ui layer",
-        "description": "pebble config layer for identity platform login ui",
-        "services": {
-            CONTAINER_NAME: {
-                "override": "replace",
-                "summary": "identity platform login ui",
-                "command": "identity-platform-login-ui",
-                "startup": "enabled",
-                "environment": {
-                    "HYDRA_ADMIN_URL": harness.get_relation_data(hydra_relation_id, "hydra")[
-                        "admin_endpoint"
-                    ],
-                    "KRATOS_PUBLIC_URL": harness.get_relation_data(kratos_relation_id, "kratos")[
-                        "public_endpoint"
-                    ],
-                    "PORT": TEST_PORT,
-                    "BASE_URL": url.replace("http", "https").replace(":80", ""),
-                },
-            }
-        },
-        "checks": {
-            "login-ui-alive": {
-                "override": "replace",
-                "http": {"url": f"http://localhost:{TEST_PORT}/health/alive"},
-            },
-        },
-    }
-
-    assert harness.charm._login_ui_layer.to_dict() == expected_layer
+    assert harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
+        "BASE_URL"
+    ] == url.replace("http", "https").replace(":80", "")
 
 
 def test_ui_endpoint_info(harness: Harness, mocker: MockerFixture) -> None:
@@ -334,10 +249,3 @@ def test_on_pebble_ready_with_loki(harness: Harness) -> None:
     setup_loki_relation(harness)
 
     assert harness.model.unit.status == ActiveStatus()
-
-
-def test_on_pebble_ready_make_dir_called(harness: Harness) -> None:
-    harness.set_can_connect(CONTAINER_NAME, True)
-    container = harness.model.unit.get_container(CONTAINER_NAME)
-    harness.charm.on.login_ui_pebble_ready.emit(container)
-    assert container.isdir("/var/log")

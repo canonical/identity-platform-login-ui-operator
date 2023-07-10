@@ -19,7 +19,8 @@ resources:
   oci-image:
     type: oci-image
     description: OCI image for login-ui
-    upstream-source: ghcr.io/canonical/identity-platform-login-ui:latest
+    # TODO @shipperizer i'd like to pin to a specific tag, but happy to move to stable if that's better, latest must go
+    upstream-source: ghcr.io/canonical/identity-platform-login-ui:e366a09b2d2556db1587e613a60ea551660da3ec
 
 requires:
   ingress:
