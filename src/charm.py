@@ -24,6 +24,7 @@ from charms.kratos.v0.kratos_endpoints import (
 from charms.loki_k8s.v0.loki_push_api import LogProxyConsumer, PromtailDigestError
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
+from charms.tempo_k8s.v0.tracing import TracingEndpointProvider
 from charms.traefik_k8s.v1.ingress import (
     IngressPerAppReadyEvent,
     IngressPerAppRequirer,
@@ -118,6 +119,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self.framework.observe(
             self.on[self._hydra_relation_name].relation_changed, self._update_pebble_layer
         )
+        self.framework.observe(self.tracing.on.endpoint_changed, self._update_pebble_layer)
         self.framework.observe(self.ingress.on.ready, self._on_ingress_ready)
         self.framework.observe(self.ingress.on.revoked, self._on_ingress_revoked)
 
@@ -216,9 +218,8 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                         "KRATOS_PUBLIC_URL": self._get_kratos_endpoint_info(),
                         "PORT": APPLICATION_PORT,
                         "BASE_URL": self._domain_url,
-                        # TODO @shipperizer this will be populated when tempo is setup
-                        # by COS and passed via the integration
-                        "JAEGER_ENDPOINT": "",
+                        "OTEL_HTTP_ENDPOINT": self._get_tracing_endpoint_info_http(),
+                        "OTEL_GRPC_ENDPOINT": self._get_tracing_endpoint_info_grpc(),
                         "TRACING_ENABLED": self._tracing_enabled,
                         "LOG_LEVEL": self._log_level,
                         "LOG_FILE": self._log_path,
@@ -233,6 +234,20 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             },
         }
         return Layer(pebble_layer)
+
+    def _get_tracing_endpoint_info_http(self) -> str:
+        if self.model.relations[self._tracing_relation_name]:
+            endpoint = self.tracing.otlp_http_endpoint
+
+            return endpoint if endpoint else ""
+        return ""
+
+    def _get_tracing_endpoint_info_grpc(self) -> str:
+        if self.model.relations[self._tracing_relation_name]:
+            endpoint = self.tracing.otlp_grpc_endpoint
+
+            return endpoint if endpoint else ""
+        return ""
 
     def _get_kratos_endpoint_info(self) -> str:
         if self.model.relations[self._kratos_relation_name]:

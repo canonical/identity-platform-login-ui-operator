@@ -91,6 +91,28 @@ def setup_loki_relation(harness: Harness) -> int:
     )
 
 
+def setup_tracing_relation(harness: Harness) -> int:
+    relation_id = harness.add_relation("tracing", "tempo-k8s")
+    harness.add_relation_unit(relation_id, "tempo-k8s/0")
+    databag = {
+        "host": "tempo-k8s-0.tempo-k8s-endpoints.testing.svc.cluster.local",
+        "ingesters": json.dumps(
+            [
+                {"protocol": "tempo", "port": 3200},
+                {"protocol": "otlp_grpc", "port": 4317},
+                {"protocol": "otlp_http", "port": 4318},
+                {"protocol": "zipkin", "port": 9411},
+            ]
+        ),
+    }
+
+    harness.update_relation_data(
+        relation_id,
+        "tempo-k8s",
+        databag,
+    )
+
+
 def test_not_leader(harness: Harness) -> None:
     """Test with unit not being leader."""
     harness.set_leader(False)
@@ -143,7 +165,8 @@ def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
                     "KRATOS_PUBLIC_URL": "",
                     "PORT": TEST_PORT,
                     "BASE_URL": None,
-                    "JAEGER_ENDPOINT": "",
+                    "OTEL_HTTP_ENDPOINT": "",
+                    "OTEL_GRPC_ENDPOINT": "",
                     "TRACING_ENABLED": harness.charm._tracing_enabled,
                     "LOG_LEVEL": harness.charm._log_level,
                     "LOG_FILE": harness.charm._log_path,
@@ -159,6 +182,36 @@ def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
     }
 
     assert harness.charm._login_ui_layer.to_dict() == expected_layer
+
+
+def test_layer_updated_with_tracing_endpoint_info(harness: Harness) -> None:
+    """Test Pebble Layer when relation data is in place."""
+    harness.set_leader(True)
+    harness.set_can_connect(CONTAINER_NAME, True)
+    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
+    tracing_relation_id = setup_tracing_relation(harness)
+
+    host = harness.get_relation_data(tracing_relation_id, "tempo-k8s")["host"]
+    http = filter(
+        lambda x: x["protocol"] == "otlp_http",
+        harness.get_relation_data(tracing_relation_id, "tempo-k8s")["ingesters"],
+    )
+    grpc = filter(
+        lambda x: x["protocol"] == "otlp_grpc",
+        harness.get_relation_data(tracing_relation_id, "tempo-k8s")["ingesters"],
+    )
+    assert (
+        harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
+            "OTEL_HTTP_ENDPOINT"
+        ]
+        == f"{host}:{http}"
+    )
+    assert (
+        harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
+            "OTEL_GRPC_ENDPOINT"
+        ]
+        == f"{host}:{grpc}"
+    )
 
 
 def test_layer_updated_with_kratos_endpoint_info(harness: Harness) -> None:
