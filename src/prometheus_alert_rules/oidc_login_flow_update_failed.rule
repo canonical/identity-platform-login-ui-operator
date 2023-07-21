@@ -1,0 +1,6 @@
+alert: OIDCLoginFlowUpdateFailed
+expr: sum(increase(http_response_time_seconds_count{route="GET/api/kratos/self-service/login", status="500"}[2m])) > 0
+labels:
+  severity: warning
+annotations:
+  summary: "Error in application {{ $labels.juju_application }} of Juju charm {{ $labels.juju_charm }} in model {{ $labels.juju_model }}. Updating OIDC Login Flow Failed."
