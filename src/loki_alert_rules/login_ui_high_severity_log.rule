@@ -12,4 +12,4 @@ groups:
     labels:
       severity: error
     annotations:
-      message: "Logs with level error found in application {{ $labels.juju_application }} of Juju charm {{ $labels.juju_charm }} in model {{ $labels.juju_model }}. Frequency of logs with level error is high."
+      summary: "Logs with level error found in application {{ $labels.juju_application }} of Juju charm {{ $labels.juju_charm }} in model {{ $labels.juju_model }}. Frequency of logs with level error is high."
