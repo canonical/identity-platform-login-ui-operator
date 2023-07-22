@@ -98,6 +98,12 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                     ],
                 }
             ],
+            refresh_event=[
+                self.on.login_ui_pebble_ready,
+                self.ingress.on.ready,
+                self.ingress.on.revoked,
+            ],
+            external_url=self._domain_url or "",
         )
 
         self.loki_consumer = LogProxyConsumer(
