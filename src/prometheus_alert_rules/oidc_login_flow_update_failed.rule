@@ -1,5 +1,5 @@
 alert: OIDCLoginFlowUpdateFailed
-expr: sum(increase(http_response_time_seconds_count{route="GET/api/kratos/self-service/login", status="500"}[2m])) > 0
+expr: sum(increase(http_response_time_seconds_count{route="POST/api/kratos/self-service/login", status="500"}[2m])) > 0
 labels:
   severity: warning
 annotations:
