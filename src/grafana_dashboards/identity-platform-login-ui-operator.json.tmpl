@@ -967,7 +967,7 @@
             "uid": "${lokids}"
           },
           "editorMode": "code",
-          "expr": "sum(count_over_time( {juju_charm=\"kratos\"} |= `\"severity\":\"error\"` [5m]))",
+          "expr": "sum(count_over_time( {juju_charm=\"kratos\"} |= `\"level\":\"error\"` [5m]))",
           "legendFormat": "error",
           "queryType": "range",
           "range": true,
@@ -979,7 +979,7 @@
             "uid": "${lokids}"
           },
           "editorMode": "code",
-          "expr": "sum(count_over_time( {juju_charm=\"kratos\"} |= `\"severity\":\"critical\"` [5m]))",
+          "expr": "sum(count_over_time( {juju_charm=\"kratos\"} |= `\"level\":\"critical\"` [5m]))",
           "hide": false,
           "legendFormat": "critical",
           "queryType": "range",
@@ -992,7 +992,7 @@
             "uid": "${lokids}"
           },
           "editorMode": "code",
-          "expr": "sum(count_over_time( {juju_charm=\"kratos\"} |= `\"severity\":\"fatal\"` [5m]))",
+          "expr": "sum(count_over_time( {juju_charm=\"kratos\"} |= `\"level\":\"fatal\"` [5m]))",
           "hide": false,
           "legendFormat": "fatal",
           "queryType": "range",
@@ -1146,7 +1146,7 @@
             "uid": "${lokids}"
           },
           "editorMode": "code",
-          "expr": "sum(count_over_time( {juju_charm=\"hydra\"} |= `\"severity\":\"error\"` [5m]))",
+          "expr": "sum(count_over_time( {juju_charm=\"hydra\"} |= `\"level\":\"error\"` [5m]))",
           "legendFormat": "error",
           "queryType": "range",
           "range": true,
@@ -1158,7 +1158,7 @@
             "uid": "${lokids}"
           },
           "editorMode": "code",
-          "expr": "sum(count_over_time( {juju_charm=\"hydra\"} |= `\"severity\":\"critical\"` [5m]))",
+          "expr": "sum(count_over_time( {juju_charm=\"hydra\"} |= `\"level\":\"critical\"` [5m]))",
           "hide": false,
           "legendFormat": "critical",
           "queryType": "range",
@@ -1171,7 +1171,7 @@
             "uid": "${lokids}"
           },
           "editorMode": "code",
-          "expr": "sum(count_over_time( {juju_charm=\"hydra\"} |= `\"severity\":\"fatal\"` [5m]))",
+          "expr": "sum(count_over_time( {juju_charm=\"hydra\"} |= `\"level\":\"fatal\"` [5m]))",
           "hide": false,
           "legendFormat": "fatal",
           "queryType": "range",
@@ -1198,11 +1198,6 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": true,
-          "text": "juju_cos7_970e2961-4fed-4b38-87b4-5547f90bae2b_prometheus_0",
-          "value": "juju_cos7_970e2961-4fed-4b38-87b4-5547f90bae2b_prometheus_0"
-        },
         "hide": 0,
         "includeAll": false,
         "multi": false,
@@ -1216,11 +1211,6 @@
         "type": "datasource"
       },
       {
-        "current": {
-          "selected": true,
-          "text": "juju_cos7_970e2961-4fed-4b38-87b4-5547f90bae2b_loki_0",
-          "value": "juju_cos7_970e2961-4fed-4b38-87b4-5547f90bae2b_loki_0"
-        },
         "hide": 0,
         "includeAll": false,
         "multi": false,
@@ -1266,7 +1256,7 @@
   },
   "timezone": "",
   "title": "Identity Platform Overview Dashboard",
-  "uid": "isFoa0z7k",
+  "uid": "login-ui-dashboard",
   "version": 1,
   "weekStart": ""
 }
