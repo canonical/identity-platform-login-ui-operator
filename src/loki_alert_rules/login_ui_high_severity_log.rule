@@ -2,7 +2,7 @@ groups:
 - name: LoginUIHighSeverityLog
   rules:
   - alert: LowFrequencyHighSeverityLog
-    expr: sum by(severity) (count_over_time({%%juju_topology%%} | json | severity =~ `error|fatal|critical` [5m])) > 0 and sum by(severity) (count_over_time({juju_application="identity-platform-login-ui-operator"} | json | severity =~ `error|fatal|critical` [5m])) < 100
+    expr: sum by(severity) (count_over_time({%%juju_topology%%} | json | severity =~ `error|fatal|critical` [5m])) > 0 and sum by(severity) (count_over_time({%%juju_topology%%} | json | severity =~ `error|fatal|critical` [5m])) < 100
     labels:
       severity: warning
     annotations:
