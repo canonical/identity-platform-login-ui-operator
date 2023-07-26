@@ -788,37 +788,10 @@
             "uid": "${lokids}"
           },
           "editorMode": "code",
-          "expr": "sum(count_over_time( {juju_charm=\"identity-platform-login-ui-operator\"} |= `\"severity\":\"error\"` [5m]))",
-          "legendFormat": "error",
+          "expr": "sum by(severity) (count_over_time({juju_application="identity-platform-login-ui-operator"} | json | severity =~ `error|fatal|critical` [5m]))",
           "queryType": "range",
           "range": true,
-          "refId": "ErrorLevelLog"
-        },
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${lokids}"
-          },
-          "editorMode": "code",
-          "expr": "sum(count_over_time( {juju_charm=\"identity-platform-login-ui-operator\"} |= `\"severity\":\"critical\"` [5m]))",
-          "hide": false,
-          "legendFormat": "critical",
-          "queryType": "range",
-          "range": true,
-          "refId": "CriticalLevelLog"
-        },
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${lokids}"
-          },
-          "editorMode": "code",
-          "expr": "sum(count_over_time( {juju_charm=\"identity-platform-login-ui-operator\"} |= `\"severity\":\"fatal\"` [5m]))",
-          "hide": false,
-          "legendFormat": "fatal",
-          "queryType": "range",
-          "range": true,
-          "refId": "FatalLevelLog"
+          "refId": "LogLevels"
         }
       ],
       "title": "Login UI High Severity Log Entries",
@@ -967,37 +940,10 @@
             "uid": "${lokids}"
           },
           "editorMode": "code",
-          "expr": "sum(count_over_time( {juju_charm=\"kratos\"} |= `\"level\":\"error\"` [5m]))",
-          "legendFormat": "error",
+          "expr": "sum by(level) (count_over_time({juju_application="kratos"} | json | level =~ `error|fatal|critical` [5m]))",
           "queryType": "range",
           "range": true,
-          "refId": "ErrorLevelLog"
-        },
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${lokids}"
-          },
-          "editorMode": "code",
-          "expr": "sum(count_over_time( {juju_charm=\"kratos\"} |= `\"level\":\"critical\"` [5m]))",
-          "hide": false,
-          "legendFormat": "critical",
-          "queryType": "range",
-          "range": true,
-          "refId": "CriticalLevelLog"
-        },
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${lokids}"
-          },
-          "editorMode": "code",
-          "expr": "sum(count_over_time( {juju_charm=\"kratos\"} |= `\"level\":\"fatal\"` [5m]))",
-          "hide": false,
-          "legendFormat": "fatal",
-          "queryType": "range",
-          "range": true,
-          "refId": "FatalLevelLog"
+          "refId": "LogLevels"
         }
       ],
       "title": "Kratos High Severity Log Entries",
@@ -1146,37 +1092,10 @@
             "uid": "${lokids}"
           },
           "editorMode": "code",
-          "expr": "sum(count_over_time( {juju_charm=\"hydra\"} |= `\"level\":\"error\"` [5m]))",
-          "legendFormat": "error",
+          "expr": "sum by(level) (count_over_time({juju_application="hydra"} | json | level =~ `error|fatal|critical` [5m]))",
           "queryType": "range",
           "range": true,
-          "refId": "ErrorLevelLog"
-        },
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${lokids}"
-          },
-          "editorMode": "code",
-          "expr": "sum(count_over_time( {juju_charm=\"hydra\"} |= `\"level\":\"critical\"` [5m]))",
-          "hide": false,
-          "legendFormat": "critical",
-          "queryType": "range",
-          "range": true,
-          "refId": "CriticalLevelLog"
-        },
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${lokids}"
-          },
-          "editorMode": "code",
-          "expr": "sum(count_over_time( {juju_charm=\"hydra\"} |= `\"level\":\"fatal\"` [5m]))",
-          "hide": false,
-          "legendFormat": "fatal",
-          "queryType": "range",
-          "range": true,
-          "refId": "FatalLevelLog"
+          "refId": "LogLevels"
         }
       ],
       "title": "Hydra High Severity Log Entries",
