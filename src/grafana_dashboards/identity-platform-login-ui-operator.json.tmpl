@@ -446,7 +446,7 @@
         "type": "prometheus",
         "uid": "${prometheusds}"
       },
-      "description": "Line Graph Showing the results of the queries belonging to the Alerts observing Oauth Errors",
+      "description": "Line Graph Showing the fluctuation of errors during requests to self service proxy routes.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -574,75 +574,17 @@
       "targets": [
         {
           "datasource": {
-            "uid": "${prometheusds}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "sum(increase(http_response_time_seconds_count{juju_charm=\"identity-platform-login-ui-operator\", route=\"GET/api/kratos/self-service/login/browser\", status=\"500\"}[2m]))",
-          "format": "time_series",
-          "hide": false,
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "AcceptLoginRequestFailed",
-          "range": true,
-          "refId": "Alert_AcceptLoginRequestFailed_Status",
-          "step": 8,
-          "target": "select metric",
-          "type": "timeserie"
-        },
-        {
-          "datasource": {
             "type": "prometheus",
             "uid": "${prometheusds}"
           },
           "editorMode": "code",
-          "exemplar": false,
-          "expr": "sum(increase(http_response_time_seconds_count{juju_charm=\"identity-platform-login-ui-operator\", route=\"GET/api/kratos/self-service/login/browser\", status=\"500\"}[2m]))",
+          "expr": "sum by(route) (increase(http_response_time_seconds_count{juju_charm=\"identity-platform-login-ui-operator\", status=~\"5.*\", route!~\"GET/api/v0/.*\"}[2m]))",
           "hide": false,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "CreateBrowserLoginFlowFailed",
           "range": true,
-          "refId": "CreateBrowserLoginFlowFailed"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheusds}"
-          },
-          "editorMode": "code",
-          "expr": "sum(increase(http_response_time_seconds_count{juju_charm=\"identity-platform-login-ui-operator\", route=\"GET/api/kratos/self-service/errors\", status=\"500\"}[2m]))",
-          "hide": false,
-          "legendFormat": "ErrorFlowUnavailable",
-          "range": true,
-          "refId": "ErrorFlowUnavailable"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheusds}"
-          },
-          "editorMode": "code",
-          "expr": "sum(increase(http_response_time_seconds_count{juju_charm=\"identity-platform-login-ui-operator\", route=\"GET/api/kratos/self-service/login/flows\", status=\"500\"}[2m]))",
-          "hide": false,
-          "legendFormat": "LoginFlowUnavailable",
-          "range": true,
-          "refId": "LoginFlowUnavailable"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheusds}"
-          },
-          "editorMode": "code",
-          "expr": "sum(increase(http_response_time_seconds_count{juju_charm=\"identity-platform-login-ui-operator\", route=\"POST/api/kratos/self-service/login\", status=\"500\"}[2m]))",
-          "hide": false,
-          "legendFormat": "OIDCLoginFlowUpdateFailed",
-          "range": true,
-          "refId": "OIDCLoginFlowUpdateFailed"
+          "refId": "LoginUIProxyError"
         }
       ],
-      "title": "Login UI Oauth Alerts Status",
+      "title": "Login UI Proxying Errors",
       "type": "timeseries"
     },
     {
@@ -788,7 +730,7 @@
             "uid": "${lokids}"
           },
           "editorMode": "code",
-          "expr": "sum by(severity) (count_over_time({juju_application="identity-platform-login-ui-operator"} | json | severity =~ `error|fatal|critical` [5m]))",
+          "expr": "sum by(severity) (count_over_time({juju_charm=\"identity-platform-login-ui-operator\"} | json | severity =~ `error|fatal|critical` [5m]))",
           "queryType": "range",
           "range": true,
           "refId": "LogLevels"
@@ -940,7 +882,7 @@
             "uid": "${lokids}"
           },
           "editorMode": "code",
-          "expr": "sum by(level) (count_over_time({juju_application="kratos"} | json | level =~ `error|fatal|critical` [5m]))",
+          "expr": "sum by(level) (count_over_time({juju_charm=\"kratos\"} | json | level =~ `error|fatal|critical` [5m]))",
           "queryType": "range",
           "range": true,
           "refId": "LogLevels"
@@ -1092,7 +1034,7 @@
             "uid": "${lokids}"
           },
           "editorMode": "code",
-          "expr": "sum by(level) (count_over_time({juju_application="hydra"} | json | level =~ `error|fatal|critical` [5m]))",
+          "expr": "sum by(level) (count_over_time({juju_charm=\"hydra\"} | json | level =~ `error|fatal|critical` [5m]))",
           "queryType": "range",
           "range": true,
           "refId": "LogLevels"
