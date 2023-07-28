@@ -8,6 +8,7 @@
 import logging
 from typing import Optional
 
+from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.hydra.v0.hydra_endpoints import (
     HydraEndpointsRelationDataMissingError,
     HydraEndpointsRelationMissingError,
@@ -62,6 +63,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self._kratos_relation_name = "kratos-endpoint-info"
         self._prometheus_scrape_relation_name = "metrics-endpoint"
         self._loki_push_api_relation_name = "logging"
+        self._grafana_dashboard_relation_name = "grafana-dashboard"
         self._tracing_relation_name = "tracing"
         self._login_ui_service_command = "/usr/bin/identity-platform-login-ui"
         self._log_dir = "/var/log"
@@ -105,6 +107,10 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             log_files=[self._log_path],
             relation_name=self._loki_push_api_relation_name,
             container_name=self._container_name,
+        )
+
+        self._grafana_dashboards = GrafanaDashboardProvider(
+            self, relation_name=self._grafana_dashboard_relation_name
         )
 
         self.framework.observe(self.on.login_ui_pebble_ready, self._on_login_ui_pebble_ready)

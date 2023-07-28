@@ -48,3 +48,7 @@ provides:
     interface: tracing
     description: |
       Provides traces to COS Tempo instance
+  grafana-dashboard:
+    description: |
+      Forwards the built-in grafana dashboard(s) for monitoring identity-platform-login-ui-operator.
+    interface: grafana_dashboard
