@@ -1,0 +1,6 @@
+alert: LoginUIProxyingError
+expr: sum by(route) (increase(http_response_time_seconds_count{status=~"5.*", route!~"GET/api/v0/.*"}[2m])) > bool 0
+labels:
+  severity: warning
+annotations:
+  summary: "Error in application {{ $labels.juju_application }} of Juju charm {{ $labels.juju_charm }} in model {{ $labels.juju_model }}. Failed route is {{ $route }}."
