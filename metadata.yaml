@@ -34,6 +34,9 @@ requires:
   logging:
     interface: loki_push_api
     limit: 1
+  tracing:
+    interface: tracing
+    limit: 1
 
 provides:
   ui-endpoint-info:
@@ -44,10 +47,6 @@ provides:
     interface: prometheus_scrape
     description: |
       Provides application metrics to COS Prometheus instance
-  tracing:
-    interface: tracing
-    description: |
-      Provides traces to COS Tempo instance
   grafana-dashboard:
     description: |
       Forwards the built-in grafana dashboard(s) for monitoring identity-platform-login-ui-operator.

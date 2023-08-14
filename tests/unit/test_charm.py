@@ -7,7 +7,6 @@
 import json
 from typing import Tuple
 
-from charms.tempo_k8s.v0.tracing import Ingester, TracingRequirerAppData
 from ops.model import ActiveStatus, WaitingStatus
 from ops.testing import Harness
 from pytest_mock import MockerFixture
@@ -92,29 +91,19 @@ def setup_loki_relation(harness: Harness) -> int:
     )
 
 
-def setup_tracing_relation(harness: Harness) -> int:
+def setup_tempo_relation(harness: Harness) -> int:
     relation_id = harness.add_relation("tracing", "tempo-k8s")
     harness.add_relation_unit(relation_id, "tempo-k8s/0")
 
-    appdata = TracingRequirerAppData(
-        host="tempo-k8s-0.tempo-k8s-endpoints.testing.svc.cluster.local",
-        ingesters=[
-            Ingester(protocol="tempo", port=3200),
-            Ingester(protocol="otlp_grpc", port=4317),
-            Ingester(protocol="otlp_http", port=4318),
-            Ingester(protocol="zipkin", port=9411),
-        ],
-    )
-
-    databag = {}
-    appdata.dump(databag)
-
+    trace_databag = {
+        "host": '"tempo-k8s-0.tempo-k8s-endpoints.namespace.svc.cluster.local"',
+        "ingesters": '[{"protocol": "tempo", "port": 3200}, {"protocol": "otlp_grpc", "port": 4317}, {"protocol": "otlp_http", "port": 4318}, {"protocol": "zipkin", "port": 9411}, {"protocol": "jaeger_http_thrift", "port": 14268}, {"protocol": "jaeger_grpc", "port": 14250}]',
+    }
     harness.update_relation_data(
         relation_id,
         "tempo-k8s",
-        databag,
+        trace_databag,
     )
-
     return relation_id
 
 
@@ -170,9 +159,7 @@ def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
                     "KRATOS_PUBLIC_URL": "",
                     "PORT": TEST_PORT,
                     "BASE_URL": None,
-                    "OTEL_HTTP_ENDPOINT": "",
-                    "OTEL_GRPC_ENDPOINT": "",
-                    "TRACING_ENABLED": harness.charm._tracing_enabled,
+                    "TRACING_ENABLED": False,
                     "LOG_LEVEL": harness.charm._log_level,
                     "LOG_FILE": harness.charm._log_path,
                 },
@@ -194,19 +181,19 @@ def test_layer_updated_with_tracing_endpoint_info(harness: Harness) -> None:
     harness.set_leader(True)
     harness.set_can_connect(CONTAINER_NAME, True)
     harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
-    tracing_relation_id = setup_tracing_relation(harness)
+    setup_tempo_relation(harness)
 
     pebble_env = harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"]
 
-    relation = harness.get_relation_data(tracing_relation_id, "tempo-k8s")
-
-    appdata = TracingRequirerAppData.load(relation)
-
-    http = [i.port for i in appdata.ingesters if i.protocol == "otlp_http"][0]
-    grpc = [i.port for i in appdata.ingesters if i.protocol == "otlp_grpc"][0]
-
-    assert pebble_env["OTEL_HTTP_ENDPOINT"] == f"{appdata.host}:{http}"
-    assert pebble_env["OTEL_GRPC_ENDPOINT"] == f"{appdata.host}:{grpc}"
+    assert (
+        pebble_env["OTEL_HTTP_ENDPOINT"]
+        == "tempo-k8s-0.tempo-k8s-endpoints.namespace.svc.cluster.local:4318"
+    )
+    assert (
+        pebble_env["OTEL_GRPC_ENDPOINT"]
+        == "tempo-k8s-0.tempo-k8s-endpoints.namespace.svc.cluster.local:4317"
+    )
+    assert pebble_env["TRACING_ENABLED"]
 
 
 def test_layer_updated_with_kratos_endpoint_info(harness: Harness) -> None:
