@@ -25,7 +25,7 @@ from charms.kratos.v0.kratos_endpoints import (
 from charms.loki_k8s.v0.loki_push_api import LogProxyConsumer, PromtailDigestError
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
-from charms.tempo_k8s.v0.tracing import TracingEndpointProvider
+from charms.tempo_k8s.v0.tracing import TracingEndpointRequirer
 from charms.traefik_k8s.v1.ingress import (
     IngressPerAppReadyEvent,
     IngressPerAppRequirer,
@@ -86,7 +86,12 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             self, relation_name=self._hydra_relation_name
         )
         self.endpoints_provider = LoginUIEndpointsProvider(self)
-        self.tracing = TracingEndpointProvider(self)
+
+        self.tracing = TracingEndpointRequirer(
+            self,
+            relation_name=self._tracing_relation_name,
+        )
+
         self.metrics_endpoint = MetricsEndpointProvider(
             self,
             relation_name=self._prometheus_scrape_relation_name,
@@ -126,11 +131,10 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self.framework.observe(
             self.on[self._hydra_relation_name].relation_changed, self._update_pebble_layer
         )
-        # TODO @shipperizer figure out why self.tracing.on.endpoint_changed
-        # doesn't seem to be working
-        self.framework.observe(
-            self.on[self._tracing_relation_name].relation_changed, self._update_pebble_layer
-        )
+
+        self.framework.observe(self.tracing.on.endpoint_changed, self._update_pebble_layer)
+        self.framework.observe(self.tracing.on.endpoint_removed, self._update_pebble_layer)
+
         self.framework.observe(self.ingress.on.ready, self._on_ingress_ready)
         self.framework.observe(self.ingress.on.revoked, self._on_ingress_revoked)
 
@@ -205,40 +209,42 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         return self.config["log_level"]
 
     @property
-    def _tracing_enabled(self) -> bool:
-        return self.config["tracing_enabled"]
-
-    @property
     def _domain_url(self) -> Optional[str]:
         return normalise_url(self.ingress.url) if self.ingress.is_ready() else None
 
     @property
+    def _tracing_ready(self) -> bool:
+        return self.tracing.is_ready()
+
+    @property
     def _login_ui_layer(self) -> Layer:
+        # Define container configuration
+        container = {
+            "override": "replace",
+            "summary": "identity platform login ui",
+            "command": self._login_ui_service_command,
+            "startup": "enabled",
+            "environment": {
+                "HYDRA_ADMIN_URL": self._get_hydra_endpoint_info(),
+                "KRATOS_PUBLIC_URL": self._get_kratos_endpoint_info(),
+                "PORT": APPLICATION_PORT,
+                "BASE_URL": self._domain_url,
+                "TRACING_ENABLED": False,
+                "LOG_LEVEL": self._log_level,
+                "LOG_FILE": self._log_path,
+            },
+        }
+
+        if self._tracing_ready:
+            container["environment"]["OTEL_HTTP_ENDPOINT"] = self._get_tracing_endpoint_info_http()
+            container["environment"]["OTEL_GRPC_ENDPOINT"] = self._get_tracing_endpoint_info_grpc()
+            container["environment"]["TRACING_ENABLED"] = True
+
         # Define Pebble layer configuration
         pebble_layer = {
             "summary": "login_ui layer",
             "description": "pebble config layer for identity platform login ui",
-            "services": {
-                self._container_name: {
-                    "override": "replace",
-                    "summary": "identity platform login ui",
-                    "command": self._login_ui_service_command,
-                    "startup": "enabled",
-                    "environment": {
-                        "HYDRA_ADMIN_URL": self._get_hydra_endpoint_info(),
-                        "KRATOS_PUBLIC_URL": self._get_kratos_endpoint_info(),
-                        "PORT": APPLICATION_PORT,
-                        "BASE_URL": self._domain_url,
-                        # TODO @shipperizer this will be populated when tempo is setup
-                        # by COS and passed via the integration
-                        "OTEL_HTTP_ENDPOINT": self._get_tracing_endpoint_info_http(),
-                        "OTEL_GRPC_ENDPOINT": self._get_tracing_endpoint_info_grpc(),
-                        "TRACING_ENABLED": self._tracing_enabled,
-                        "LOG_LEVEL": self._log_level,
-                        "LOG_FILE": self._log_path,
-                    },
-                }
-            },
+            "services": {self._container_name: container},
             "checks": {
                 "login-ui-alive": {
                     "override": "replace",
@@ -249,16 +255,16 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         return Layer(pebble_layer)
 
     def _get_tracing_endpoint_info_http(self) -> str:
-        if not self.model.relations[self._tracing_relation_name]:
+        if not self._tracing_ready:
             return ""
 
-        return self.tracing.otlp_http_endpoint or ""
+        return self.tracing.otlp_http_endpoint() or ""
 
     def _get_tracing_endpoint_info_grpc(self) -> str:
-        if not self.model.relations[self._tracing_relation_name]:
+        if not self._tracing_ready:
             return ""
 
-        return self.tracing.otlp_grpc_endpoint or ""
+        return self.tracing.otlp_grpc_endpoint() or ""
 
     def _get_kratos_endpoint_info(self) -> str:
         if self.model.relations[self._kratos_relation_name]:
