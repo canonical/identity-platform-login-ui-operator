@@ -20,7 +20,7 @@ juju deploy identity-platform-login-ui-operator
 This charm offers integration with [hydra-operator](https://github.com/canonical/hydra-operator). To integrate them, run:
 
 ```console
-juju integrate hydra:endpoint-info identity-platform-login-ui-operator:endpoint-info
+juju integrate hydra:hydra-endpoint-info identity-platform-login-ui-operator:hydra-endpoint-info
 juju integrate hydra:ui-endpoint-info identity-platform-login-ui-operator:ui-endpoint-info
 ```
 
