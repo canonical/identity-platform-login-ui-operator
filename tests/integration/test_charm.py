@@ -68,6 +68,6 @@ async def test_has_ingress(ops_test: OpsTest):
     # Get the traefik address and try to reach identity-platform-login-ui
     public_address = await get_unit_address(ops_test, TRAEFIK_PUBLIC_APP, 0)
 
-    resp = requests.get(f"http://{public_address}/{ops_test.model.name}-{APP_NAME}")
+    resp = requests.get(f"http://{public_address}/{ops_test.model.name}-{APP_NAME}/ui/login")
 
     assert resp.status_code == 200
