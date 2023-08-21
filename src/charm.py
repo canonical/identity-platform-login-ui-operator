@@ -59,7 +59,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         super().__init__(*args)
         self._container_name = "login-ui"
         self._container = self.unit.get_container(self._container_name)
-        self._hydra_relation_name = "endpoint-info"
+        self._hydra_relation_name = "hydra-endpoint-info"
         self._kratos_relation_name = "kratos-endpoint-info"
         self._prometheus_scrape_relation_name = "metrics-endpoint"
         self._loki_push_api_relation_name = "logging"
@@ -292,9 +292,9 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             hydra_endpoints = self.hydra_endpoints.get_hydra_endpoints()
             hydra_url = hydra_endpoints["admin_endpoint"]
         except HydraEndpointsRelationDataMissingError:
-            logger.info("No hydra endpoint-info relation data found")
+            logger.info("No hydra-endpoint-info relation data found")
         except HydraEndpointsRelationMissingError:
-            logger.info("No hydra endpoint-info relation found")
+            logger.info("No hydra-endpoint-info relation found")
         return hydra_url
 
     def _promtail_error(self, event: PromtailDigestError) -> None:
