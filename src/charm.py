@@ -26,7 +26,7 @@ from charms.loki_k8s.v0.loki_push_api import LogProxyConsumer, PromtailDigestErr
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.tempo_k8s.v0.tracing import TracingEndpointRequirer
-from charms.traefik_k8s.v1.ingress import (
+from charms.traefik_k8s.v2.ingress import (
     IngressPerAppReadyEvent,
     IngressPerAppRequirer,
     IngressPerAppRevokedEvent,
@@ -45,7 +45,7 @@ from ops.pebble import ChangeError, Layer
 
 from utils import normalise_url
 
-APPLICATION_PORT = "8080"
+APPLICATION_PORT = 8080
 
 
 logger = logging.getLogger(__name__)
@@ -70,13 +70,14 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self._log_path = f"{self._log_dir}/ui.log"
 
         self.service_patcher = KubernetesServicePatch(
-            self, [("identity-platform-login-ui", int(APPLICATION_PORT))]
+            self, [("identity-platform-login-ui", APPLICATION_PORT)]
         )
         self.ingress = IngressPerAppRequirer(
             self,
             relation_name="ingress",
             port=APPLICATION_PORT,
             strip_prefix=True,
+            redirect_https=False,
         )
 
         self.kratos_endpoints = KratosEndpointsRequirer(
@@ -227,7 +228,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             "environment": {
                 "HYDRA_ADMIN_URL": self._get_hydra_endpoint_info(),
                 "KRATOS_PUBLIC_URL": self._get_kratos_endpoint_info(),
-                "PORT": APPLICATION_PORT,
+                "PORT": str(APPLICATION_PORT),
                 "BASE_URL": self._domain_url,
                 "TRACING_ENABLED": False,
                 "LOG_LEVEL": self._log_level,
