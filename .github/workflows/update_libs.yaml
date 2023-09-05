@@ -49,10 +49,4 @@ jobs:
           body: Update charm libs
           upsert: true
           ignore-no-changes: true
-
-      - name: Enable auto-merge on Pull Request
-        id: approve-pull-request
-        run: |
-          gh pr merge 'automated-update-charm-libs' --auto --body "Update charm libs" --subject "(Automated) Update Charm Libs" || true
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+          auto-merge: true
