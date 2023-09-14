@@ -3,4 +3,4 @@ expr: sum by(route) (increase(http_response_time_seconds_count{status=~"5.*", ro
 labels:
   severity: warning
 annotations:
-  summary: "Error in application {{ $labels.juju_application }} of Juju charm {{ $labels.juju_charm }} in model {{ $labels.juju_model }}. Failed route is {{ $route }}."
+  summary: "Error in application {{ $labels.juju_application }} of Juju charm {{ $labels.juju_charm }} in model {{ $labels.juju_model }}."
