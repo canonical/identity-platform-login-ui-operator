@@ -233,6 +233,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                 "TRACING_ENABLED": False,
                 "LOG_LEVEL": self._log_level,
                 "LOG_FILE": self._log_path,
+                "DEBUG": self._log_level == "DEBUG",
             },
         }
 
