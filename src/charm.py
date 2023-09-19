@@ -269,15 +269,15 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         return self.tracing.otlp_grpc_endpoint() or ""
 
     def _get_kratos_endpoint_info(self) -> str:
+        kratos_public_url = ""
         if self.model.relations[self._kratos_relation_name]:
             try:
                 kratos_endpoints = self.kratos_endpoints.get_kratos_endpoints()
-                kratos_public_url = kratos_endpoints["public_endpoint"]
-                return kratos_public_url
             except KratosEndpointsRelationDataMissingError:
                 logger.info("No kratos-endpoint-info relation data found")
-                return ""
-        return ""
+            if kratos_endpoints:
+                kratos_public_url = kratos_endpoints["public_endpoint"]
+        return kratos_public_url
 
     def _update_login_ui_endpoint_relation_data(self, event: RelationEvent) -> None:
         endpoint = self._domain_url or ""
