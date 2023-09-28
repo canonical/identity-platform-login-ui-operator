@@ -25,6 +25,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
+  "id": 19,
   "links": [
     {
       "asDropdown": false,
@@ -94,47 +95,45 @@
         "type": "prometheus",
         "uid": "${prometheusds}"
       },
-      "description": "List of units in the Login UI juju deployment, and their status.",
+      "description": "Percentage of available Login UI units",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
           "decimals": 0,
-          "mappings": [
-            {
-              "options": {
-                "0": {
-                  "text": ":("
-                }
-              },
-              "type": "value"
-            }
-          ],
+          "mappings": [],
+          "max": 1,
+          "min": -1,
+          "noValue": "0",
           "thresholds": {
-            "mode": "absolute",
+            "mode": "percentage",
             "steps": [
               {
                 "color": "rgba(222, 3, 3, 0.9)",
                 "value": null
               },
               {
-                "color": "rgb(234, 245, 234)",
-                "value": 1
+                "color": "orange",
+                "value": 20
               },
               {
-                "color": "rgb(235, 244, 235)",
-                "value": 10000
+                "color": "#EAB839",
+                "value": 50
+              },
+              {
+                "color": "green",
+                "value": 80
               }
             ]
           },
-          "unit": "none"
+          "unit": "percentunit"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 5,
+        "h": 10,
+        "w": 4,
         "x": 0,
         "y": 0
       },
@@ -142,19 +141,16 @@
       "links": [],
       "maxDataPoints": 100,
       "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
+        "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "mean"
+            "lastNotNull"
           ],
           "fields": "",
           "values": false
         },
-        "text": {},
-        "textMode": "auto"
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
       },
       "pluginVersion": "9.2.1",
       "targets": [
@@ -163,290 +159,185 @@
             "uid": "${prometheusds}"
           },
           "editorMode": "code",
-          "exemplar": true,
-          "expr": "group(up{juju_charm=\"identity-platform-login-ui-operator\"}) by (juju_unit)",
+          "exemplar": false,
+          "expr": "sum(up{juju_charm=\"identity-platform-login-ui-operator\"}) / count(up{juju_charm=\"identity-platform-login-ui-operator\"})",
           "format": "time_series",
-          "instant": true,
+          "instant": false,
           "interval": "",
           "intervalFactor": 2,
           "legendFormat": "{{juju_unit}}",
+          "range": true,
           "refId": "A",
           "step": 60
         }
       ],
       "title": "Login UI Unit Availability",
-      "type": "stat"
+      "type": "gauge"
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "${prometheusds}"
       },
-      "description": "List of units in the hydra juju deployment, and their status.",
+      "description": "Percentage of available Hydra units",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
-          "decimals": 0,
-          "mappings": [
-            {
-              "options": {
-                "0": {
-                  "text": ":("
-                }
-              },
-              "type": "value"
-            }
-          ],
+          "decimals": 1,
+          "mappings": [],
+          "max": 1,
+          "min": -2,
+          "noValue": "0",
           "thresholds": {
-            "mode": "absolute",
+            "mode": "percentage",
             "steps": [
               {
                 "color": "rgba(222, 3, 3, 0.9)",
                 "value": null
               },
               {
-                "color": "rgb(234, 245, 234)",
-                "value": 1
+                "color": "orange",
+                "value": 20
               },
               {
-                "color": "rgb(235, 244, 235)",
-                "value": 10000
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "green",
+                "value": 80
               }
             ]
           },
-          "unit": "none"
+          "unit": "percentunit"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 5,
-        "x": 5,
+        "h": 10,
+        "w": 4,
+        "x": 4,
         "y": 0
       },
-      "id": 20,
+      "id": 27,
       "links": [],
       "maxDataPoints": 100,
       "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
+        "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "mean"
+            "lastNotNull"
           ],
           "fields": "",
           "values": false
         },
-        "text": {},
-        "textMode": "auto"
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
       },
       "pluginVersion": "9.2.1",
       "targets": [
         {
           "datasource": {
+            "type": "prometheus",
             "uid": "${prometheusds}"
           },
           "editorMode": "code",
-          "exemplar": true,
-          "expr": "group(up{juju_charm=\"hydra\"}) by (juju_unit)",
-          "format": "time_series",
-          "instant": true,
-          "interval": "",
-          "intervalFactor": 2,
-          "legendFormat": "{{juju_unit}}",
-          "refId": "A",
-          "step": 60
+          "expr": "sum(up{juju_charm=\"hydra\"}) / count(up{juju_charm=\"hydra\",juju_unit=~\"$juju_unit\"})",
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
         }
       ],
       "title": "Hydra Unit Availability",
-      "type": "stat"
+      "type": "gauge"
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "${prometheusds}"
       },
-      "description": "List of units in the Kratos juju deployment, and their status.",
+      "description": "Percentage of available Kratos units",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
-          "decimals": 0,
-          "mappings": [
-            {
-              "options": {
-                "0": {
-                  "text": ":("
-                }
-              },
-              "type": "value"
-            }
-          ],
+          "decimals": 1,
+          "mappings": [],
+          "max": 1,
+          "min": -2,
+          "noValue": "0",
           "thresholds": {
-            "mode": "absolute",
+            "mode": "percentage",
             "steps": [
               {
                 "color": "rgba(222, 3, 3, 0.9)",
                 "value": null
               },
               {
-                "color": "rgb(234, 245, 234)",
-                "value": 1
+                "color": "orange",
+                "value": 20
               },
               {
-                "color": "rgb(235, 244, 235)",
-                "value": 10000
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "green",
+                "value": 80
               }
             ]
           },
-          "unit": "none"
+          "unit": "percentunit"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 5,
-        "x": 10,
+        "h": 10,
+        "w": 4,
+        "x": 8,
         "y": 0
       },
-      "id": 19,
+      "id": 25,
       "links": [],
       "maxDataPoints": 100,
       "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
+        "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "mean"
+            "lastNotNull"
           ],
           "fields": "",
           "values": false
         },
-        "text": {},
-        "textMode": "auto"
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
       },
       "pluginVersion": "9.2.1",
       "targets": [
         {
           "datasource": {
+            "type": "prometheus",
             "uid": "${prometheusds}"
           },
           "editorMode": "code",
-          "exemplar": true,
-          "expr": "group(up{juju_charm=\"kratos\"}) by (juju_unit)",
-          "format": "time_series",
-          "instant": true,
-          "interval": "",
-          "intervalFactor": 2,
-          "legendFormat": "{{juju_unit}}",
-          "refId": "A",
-          "step": 60
+          "expr": "sum(up{juju_charm=\"kratos\",juju_unit=~\"$juju_unit\"}) / count(up{juju_charm=\"kratos\",juju_unit=~\"$juju_unit\"})",
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
         }
       ],
       "title": "Kratos Unit Availability",
-      "type": "stat"
+      "type": "gauge"
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "${prometheusds}"
       },
-      "description": "List of units in the Postgresql juju deployment, and their status.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "mappings": [
-            {
-              "options": {
-                "0": {
-                  "text": ":("
-                }
-              },
-              "type": "value"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "rgba(222, 3, 3, 0.9)",
-                "value": null
-              },
-              {
-                "color": "rgb(234, 245, 234)",
-                "value": 1
-              },
-              {
-                "color": "rgb(235, 244, 235)",
-                "value": 10000
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 5,
-        "x": 15,
-        "y": 0
-      },
-      "id": 21,
-      "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "mean"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "9.2.1",
-      "targets": [
-        {
-          "datasource": {
-            "uid": "${prometheusds}"
-          },
-          "editorMode": "code",
-          "exemplar": true,
-          "expr": "group(up{juju_charm=\"postgresql-k8s\"}) by (juju_unit)",
-          "format": "time_series",
-          "instant": true,
-          "interval": "",
-          "intervalFactor": 2,
-          "legendFormat": "{{juju_unit}}",
-          "refId": "A",
-          "step": 60
-        }
-      ],
-      "title": "Postgresql Unit Availability",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${prometheusds}"
-      },
-      "description": "Line Graph Showing the fluctuation of errors during requests to self service proxy routes.",
+      "description": "Showing the  rate of errors during requests to self service proxy routes.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -553,8 +444,8 @@
       "gridPos": {
         "h": 10,
         "w": 10,
-        "x": 0,
-        "y": 6
+        "x": 12,
+        "y": 0
       },
       "id": 7,
       "links": [],
@@ -578,13 +469,13 @@
             "uid": "${prometheusds}"
           },
           "editorMode": "code",
-          "expr": "sum by(route) (increase(http_response_time_seconds_count{juju_charm=\"identity-platform-login-ui-operator\", status=~\"5.*\", route!~\"GET/api/v0/.*\"}[2m]))",
+          "expr": "sum by(route) (rate(http_response_time_seconds_count{route!~\"GET/api/v0/.*\",status=~\"5.*\"}[2m]))",
           "hide": false,
           "range": true,
           "refId": "LoginUIProxyError"
         }
       ],
-      "title": "Login UI Proxying Errors",
+      "title": "Login UI Proxying Errors Rate",
       "type": "timeseries"
     },
     {
@@ -675,190 +566,14 @@
                 }
               }
             ]
-          },
-          {
-            "__systemRef": "hideSeriesFrom",
-            "matcher": {
-              "id": "byNames",
-              "options": {
-                "mode": "exclude",
-                "names": [
-                  "error"
-                ],
-                "prefix": "All except:",
-                "readOnly": true
-              }
-            },
-            "properties": [
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": true
-                }
-              }
-            ]
           }
         ]
       },
       "gridPos": {
-        "h": 10,
-        "w": 10,
-        "x": 10,
-        "y": 6
-      },
-      "id": 18,
-      "links": [],
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "8.1.0-pre",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${lokids}"
-          },
-          "editorMode": "code",
-          "expr": "sum by(severity) (count_over_time({juju_charm=\"identity-platform-login-ui-operator\"} | json | severity =~ `error|fatal|critical` [5m]))",
-          "queryType": "range",
-          "range": true,
-          "refId": "LogLevels"
-        }
-      ],
-      "title": "Login UI High Severity Log Entries",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "${lokids}"
-      },
-      "description": "Visualisation for the number of log entries with levels error or above within 5 minutes spans.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 5,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "links": [],
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "400"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "#447EBC",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "500"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "#BF1B00",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "__systemRef": "hideSeriesFrom",
-            "matcher": {
-              "id": "byNames",
-              "options": {
-                "mode": "exclude",
-                "names": [
-                  "error"
-                ],
-                "prefix": "All except:",
-                "readOnly": true
-              }
-            },
-            "properties": [
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": true
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 10,
-        "w": 10,
+        "h": 11,
+        "w": 6,
         "x": 0,
-        "y": 16
+        "y": 10
       },
       "id": 22,
       "links": [],
@@ -882,7 +597,7 @@
             "uid": "${lokids}"
           },
           "editorMode": "code",
-          "expr": "sum by(level) (count_over_time({juju_charm=\"kratos\"} | json | level =~ `error|fatal|critical` [5m]))",
+          "expr": "sum by(level)(count_over_time({juju_charm=\"kratos\",juju_unit=~\"$juju_unit\"} | json | level=~\"error|fatal|critical\"[5m]))",
           "queryType": "range",
           "range": true,
           "refId": "LogLevels"
@@ -1007,10 +722,10 @@
         ]
       },
       "gridPos": {
-        "h": 10,
-        "w": 10,
-        "x": 10,
-        "y": 16
+        "h": 11,
+        "w": 7,
+        "x": 6,
+        "y": 10
       },
       "id": 23,
       "links": [],
@@ -1034,13 +749,141 @@
             "uid": "${lokids}"
           },
           "editorMode": "code",
-          "expr": "sum by(level) (count_over_time({juju_charm=\"hydra\"} | json | level =~ `error|fatal|critical` [5m]))",
+          "expr": "sum by(level)(count_over_time({juju_charm=\"hydra\",juju_unit=~\"$juju_unit\"} | json | level=~\"error|fatal|critical\"[5m]))",
           "queryType": "range",
           "range": true,
           "refId": "LogLevels"
         }
       ],
       "title": "Hydra High Severity Log Entries",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "${lokids}"
+      },
+      "description": "Visualisation for the number of log entries with levels error or above within 5 minutes spans.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 5,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "400"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#447EBC",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "500"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#BF1B00",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 9,
+        "x": 13,
+        "y": 10
+      },
+      "id": 18,
+      "links": [],
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.1.0-pre",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "${lokids}"
+          },
+          "editorMode": "code",
+          "expr": "sum by(severity)(count_over_time({juju_charm=\"identity-platform-login-ui-operator\",juju_unit=~\"$juju_unit\"} | json | severity=~\"error|fatal|critical\"[5m]))",
+          "queryType": "range",
+          "range": true,
+          "refId": "LogLevels"
+        }
+      ],
+      "title": "Login UI High Severity Log Entries",
       "type": "timeseries"
     }
   ],
@@ -1059,6 +902,139 @@
   "templating": {
     "list": [
       {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "uid": "${prometheusds}"
+        },
+        "definition": "label_values(up{juju_model=~\"$juju_model\",juju_model_uuid=~\"$juju_model_uuid\",juju_application=~\"$juju_application\"},juju_unit)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Juju unit",
+        "multi": true,
+        "name": "juju_unit",
+        "options": [],
+        "query": {
+          "query": "label_values(up{juju_model=~\"$juju_model\",juju_model_uuid=~\"$juju_model_uuid\",juju_application=~\"$juju_application\"},juju_unit)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "uid": "${prometheusds}"
+        },
+        "definition": "label_values(up{juju_model=~\"$juju_model\",juju_model_uuid=~\"$juju_model_uuid\"},juju_application)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Juju application",
+        "multi": true,
+        "name": "juju_application",
+        "options": [],
+        "query": {
+          "query": "label_values(up{juju_model=~\"$juju_model\",juju_model_uuid=~\"$juju_model_uuid\"},juju_application)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "uid": "${prometheusds}"
+        },
+        "definition": "label_values(up{juju_model=~\"$juju_model\"},juju_model_uuid)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Juju model uuid",
+        "multi": true,
+        "name": "juju_model_uuid",
+        "options": [],
+        "query": {
+          "query": "label_values(up{juju_model=~\"$juju_model\"},juju_model_uuid)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "uid": "${prometheusds}"
+        },
+        "definition": "label_values(up,juju_model)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Juju model",
+        "multi": true,
+        "name": "juju_model",
+        "options": [],
+        "query": {
+          "query": "label_values(up,juju_model)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "juju_iam_5358b275-84e0-4e92-818e-1046ac5e704d_prometheus_0",
+          "value": "juju_iam_5358b275-84e0-4e92-818e-1046ac5e704d_prometheus_0"
+        },
         "hide": 0,
         "includeAll": false,
         "multi": false,
@@ -1072,6 +1048,11 @@
         "type": "datasource"
       },
       {
+        "current": {
+          "selected": false,
+          "text": "juju_iam_5358b275-84e0-4e92-818e-1046ac5e704d_loki_0",
+          "value": "juju_iam_5358b275-84e0-4e92-818e-1046ac5e704d_loki_0"
+        },
         "hide": 0,
         "includeAll": false,
         "multi": false,
@@ -1087,7 +1068,7 @@
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-30m",
     "to": "now"
   },
   "timepicker": {
