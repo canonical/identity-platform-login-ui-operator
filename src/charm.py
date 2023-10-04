@@ -6,6 +6,7 @@
 
 """A Juju charm for Identity Platform Login UI."""
 import logging
+import re
 from typing import Optional
 
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
@@ -41,7 +42,7 @@ from ops.charm import (
 )
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
-from ops.pebble import ChangeError, Layer
+from ops.pebble import ChangeError, Error, Layer
 
 from utils import normalise_url
 
@@ -144,6 +145,23 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             self._promtail_error,
         )
 
+    def _get_version(self) -> Optional[str]:
+        cmd = ["identity-platform-login-ui", "--version"]
+        try:
+            process = self._container.exec(cmd)
+            stdout, _ = process.wait_output()
+        except Error:
+            return
+
+        out_re = r"App Version:\s*(.+)\s*$"
+        versions = re.search(out_re, stdout)
+        if versions:
+            return versions[1]
+
+    def _set_version(self) -> None:
+        if version := self._get_version():
+            self.unit.set_workload_version(version)
+
     def _on_login_ui_pebble_ready(self, event: WorkloadEvent) -> None:
         """Define and start a workload using the Pebble API."""
         # Necessary directory for log forwarding
@@ -156,6 +174,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             self._container.make_dir(path=self._log_dir, make_parents=True)
             logger.info(f"Created directory {self._log_dir}")
 
+        self._set_version()
         self._update_pebble_layer(event)
 
     def _on_install(self, event: InstallEvent) -> None:
