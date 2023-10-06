@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 import ops.testing
 import pytest
+from ops.testing import Harness
 from pytest_mock import MockerFixture
 
 from charm import IdentityPlatformLoginUiOperatorCharm
@@ -18,6 +19,13 @@ def harness(mocked_kubernetes_service_patcher: MagicMock) -> ops.testing.Harness
     harness.set_model_name("testing")
     harness.begin()
     return harness
+
+
+@pytest.fixture(autouse=True)
+def mock_get_version(harness: Harness):
+    harness.handle_exec(
+        "login-ui", ["identity-platform-login-ui", "--version"], result="App Version: 1.42.0"
+    )
 
 
 @pytest.fixture()
