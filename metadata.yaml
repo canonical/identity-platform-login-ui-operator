@@ -10,6 +10,7 @@ summary: Operator for Identity platform UI backend and proxy
 description: |
   Operator for Identity platform UI backend and proxy
 
+docs: https://discourse.charmhub.io/t/identity-platform-login-ui-docs-index/12169
 containers:
   login-ui:
     resource: oci-image
