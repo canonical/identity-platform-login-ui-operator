@@ -1,5 +1,7 @@
 # Identity Platform Login UI Operator
 
+[![CharmHub Badge](https://charmhub.io/identity-platform-login-ui-operator/badge.svg)](https://charmhub.io/identity-platform-login-ui-operator)
+
 ## Description
 
 This repository hosts the Kubernetes Python Operator for Identity Platform Login UI.
