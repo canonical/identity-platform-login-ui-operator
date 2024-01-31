@@ -2,7 +2,7 @@ groups:
 - name: LoginUIHighSeverityLog
   rules:
   - alert: HighFrequencyHighSeverityLog
-    expr: sum by(severity) (count_over_time({%%juju_topology%%} | json | severity =~ `error|fatal|critical` [5m])) > 100
+    expr: sum by(severity) (count_over_time({%%juju_topology%%} | json | __error__ != "JSONParserErr" | severity =~ `error|fatal|critical` [5m])) > 100
     labels:
       severity: error
     annotations:
