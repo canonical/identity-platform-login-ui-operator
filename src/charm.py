@@ -66,7 +66,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self._loki_push_api_relation_name = "logging"
         self._grafana_dashboard_relation_name = "grafana-dashboard"
         self._tracing_relation_name = "tracing"
-        self._login_ui_service_command = "/usr/bin/identity-platform-login-ui"
+        self._login_ui_service_command = "/usr/bin/identity-platform-login-ui serve"
         self._log_dir = "/var/log"
         self._log_path = f"{self._log_dir}/ui.log"
 
@@ -146,7 +146,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         )
 
     def _get_version(self) -> Optional[str]:
-        cmd = ["identity-platform-login-ui", "--version"]
+        cmd = ["identity-platform-login-ui", "version"]
         try:
             process = self._container.exec(cmd)
             stdout, _ = process.wait_output()
