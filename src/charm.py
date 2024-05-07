@@ -9,6 +9,7 @@ import logging
 import re
 from typing import Optional
 
+from charms.istio_pilot.v0.istio_gateway_info import GatewayRelationError, GatewayRequirer
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.hydra.v0.hydra_endpoints import (
     HydraEndpointsRelationDataMissingError,
@@ -44,6 +45,7 @@ from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import ChangeError, Error, Layer
 from serialized_data_interface import get_interface
+
 
 from utils import normalise_url
 
@@ -83,6 +85,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             redirect_https=False,
         )
 
+        self.gateway = GatewayRequirer(self)
         self.kratos_endpoints = KratosEndpointsRequirer(
             self, relation_name=self._kratos_relation_name
         )
@@ -150,6 +153,30 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self.framework.observe(
             self.on["istio-public-ingress"].relation_changed, self._handle_istio_ingress
         )
+
+        self.framework.observe(self.on["gateway-info"].relation_changed, self._handle_istio_gateway)
+
+    def _handle_istio_gateway(self, event):
+        ip = self._get_gateway_dns()
+
+        if self.unit.is_leader():
+            logger.info("This app's public ingress URL: %s", ip)
+        self._update_pebble_layer(event)
+        self._update_login_ui_endpoint_relation_data(event)
+    
+    def _get_gateway_dns(self) -> str:
+        """Retrieve gateway namespace and name from relation data."""
+        if not self.gateway:
+            return ""
+
+        try:
+            gateway_data = self.gateway.get_relation_data()
+        except GatewayRelationError as e:
+            return ""
+
+        return gateway_data["gateway_dns"] or gateway_data["gateway_ip"]
+
+
 
     # TODO @shipperizer Event is not used, see if that's ok
     def _handle_istio_ingress(self, _):
@@ -265,6 +292,9 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
     @property
     def _domain_url(self) -> Optional[str]:
+        dns = self._get_gateway_dns()
+        if dns:
+            return normalise_url("https://"+dns)
         return normalise_url(self.ingress.url) if self.ingress.is_ready() else None
 
     @property
