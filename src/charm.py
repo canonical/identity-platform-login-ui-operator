@@ -43,10 +43,12 @@ from ops.charm import (
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import ChangeError, Error, Layer
+from serialized_data_interface import get_interface
 
 from utils import normalise_url
 
 APPLICATION_PORT = 8080
+URI_REGEXP = "(^/api/consent$)|(^/api/device$)|(^/api/kratos/self-service/.*)|(^/ui/.*)"
 
 
 logger = logging.getLogger(__name__)
@@ -144,6 +146,39 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             self.loki_consumer.on.promtail_digest_error,
             self._promtail_error,
         )
+
+        self.framework.observe(
+            self.on["istio-public-ingress"].relation_changed, self._handle_istio_ingress
+        )
+
+    # TODO @shipperizer Event is not used, see if that's ok
+    def _handle_istio_ingress(self, _):
+        interface = get_interface(self, "istio-public-ingress")
+
+        if not interface:
+            return
+
+        interface.send_data(
+            {
+                "prefix": "",  # TODO @shipperizer needs to be passed as empty to avoid failure in the required validation
+                "regex": URI_REGEXP,
+                "service": self.model.app.name,
+                "port": APPLICATION_PORT,
+            }
+        )
+
+        # # ui rule
+        # interface.send_data(
+        #     {
+        #         "prefix": "/ui", # TODO @shipperizer needs to be passed as empty to avoid failure in the required validation
+        #         # TODO @shipperizer we might want to rewrite this path but we need to make sure
+        #         # that all the urls in kratos point to this rewritten rule
+        #         "rewrite": "/ui",
+        #         "regex": URI_REGEXP,
+        #         "service": self.model.app.name,
+        #         "port": APPLICATION_PORT,
+        #     }
+        # )
 
     def _get_version(self) -> Optional[str]:
         cmd = ["identity-platform-login-ui", "version"]

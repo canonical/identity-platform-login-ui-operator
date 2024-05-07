@@ -37,7 +37,65 @@ requires:
   tracing:
     interface: tracing
     limit: 1
-
+  istio-public-ingress:
+    interface: ingress
+    schema:
+      v3:
+        requires:
+          type: object
+          properties:
+            service:
+              type: string
+            port:
+              type: integer
+            prefix:
+              type: string
+            rewrite:
+              type: string
+            regex:
+              type: string        
+          required:
+            - service
+            - port
+            - prefix
+            - regex
+      v2:
+        requires:
+          type: object
+          properties:
+            service:
+              type: string
+            port:
+              type: integer
+            namespace:
+              type: string
+            prefix:
+              type: string
+            rewrite:
+              type: string
+          required:
+            - service
+            - port
+            - namespace
+            - prefix
+      v1:
+        requires:
+          type: object
+          properties:
+            service:
+              type: string
+            port:
+              type: integer
+            prefix:
+              type: string
+            rewrite:
+              type: string
+          required:
+            - service
+            - port
+            - prefix
+    versions: [v3]
+    __schema_source: https://raw.githubusercontent.com/shipperizer/istio-operators/patch/identity/hack/ingress.yaml
 provides:
   ui-endpoint-info:
     interface: login_ui_endpoints
