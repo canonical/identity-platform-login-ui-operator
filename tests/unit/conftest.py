@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Unit test configuration."""
+
 from unittest.mock import MagicMock
 
 import ops.testing

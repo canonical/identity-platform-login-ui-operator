@@ -5,6 +5,7 @@
 # Learn more at: https://juju.is/docs/sdk
 
 """A Juju charm for Identity Platform Login UI."""
+
 import logging
 import re
 from typing import Optional
