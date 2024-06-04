@@ -11,6 +11,9 @@ description: |
   Operator for Identity platform UI backend and proxy
 
 docs: https://discourse.charmhub.io/t/identity-platform-login-ui-docs-index/12169
+source: https://github.com/canonical/identity-platform-login-ui-operator
+issues: https://github.com/canonical/identity-platform-login-ui-operator/issues
+
 containers:
   login-ui:
     resource: oci-image
