@@ -3,7 +3,7 @@
 
 """Unit test configuration."""
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, mock_open, patch
 
 import ops.testing
 import pytest
@@ -27,6 +27,12 @@ def mock_get_version(harness: Harness):
     harness.handle_exec(
         "login-ui", ["identity-platform-login-ui", "--version"], result="App Version: 1.42.0"
     )
+
+
+@pytest.fixture(autouse=True)
+def patch_file_open():
+    with patch("builtins.open", new_callable=mock_open, read_data="data") as f:
+        yield f
 
 
 @pytest.fixture()
