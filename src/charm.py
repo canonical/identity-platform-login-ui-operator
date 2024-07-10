@@ -45,10 +45,9 @@ from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import ChangeError, Error, Layer
 
+from certificate_transfer_integration import CertTransfer
+from constants import APPLICATION_PORT, CERTIFICATE_TRANSFER_NAME, WORKLOAD_CONTAINER_NAME
 from utils import normalise_url
-
-APPLICATION_PORT = 8080
-
 
 logger = logging.getLogger(__name__)
 
@@ -59,8 +58,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
     def __init__(self, *args):
         """Initialize Charm."""
         super().__init__(*args)
-        self._container_name = "login-ui"
-        self._container = self.unit.get_container(self._container_name)
+        self._container = self.unit.get_container(WORKLOAD_CONTAINER_NAME)
         self._hydra_relation_name = "hydra-endpoint-info"
         self._kratos_relation_name = "kratos-endpoint-info"
         self._prometheus_scrape_relation_name = "metrics-endpoint"
@@ -114,11 +112,18 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             self,
             log_files=[self._log_path],
             relation_name=self._loki_push_api_relation_name,
-            container_name=self._container_name,
+            container_name=WORKLOAD_CONTAINER_NAME,
         )
 
         self._grafana_dashboards = GrafanaDashboardProvider(
             self, relation_name=self._grafana_dashboard_relation_name
+        )
+
+        self.cert_transfer = CertTransfer(
+            self,
+            WORKLOAD_CONTAINER_NAME,
+            self._update_pebble_layer,
+            CERTIFICATE_TRANSFER_NAME,
         )
 
         self.framework.observe(self.on.login_ui_pebble_ready, self._on_login_ui_pebble_ready)
@@ -201,8 +206,9 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             return
 
         self.unit.status = MaintenanceStatus("Configuration in progress")
+        self.cert_transfer.push_ca_certs()
 
-        self._container.add_layer(self._container_name, self._login_ui_layer, combine=True)
+        self._container.add_layer(WORKLOAD_CONTAINER_NAME, self._login_ui_layer, combine=True)
         logger.info("Pebble plan updated with new configuration, replanning")
         try:
             self._container.replan()
@@ -266,7 +272,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         pebble_layer = {
             "summary": "login_ui layer",
             "description": "pebble config layer for identity platform login ui",
-            "services": {self._container_name: container},
+            "services": {WORKLOAD_CONTAINER_NAME: container},
             "checks": {
                 "login-ui-alive": {
                     "override": "replace",
