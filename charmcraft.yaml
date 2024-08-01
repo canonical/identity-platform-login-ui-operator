@@ -1,7 +1,74 @@
 # This file configures Charmcraft.
 # See https://juju.is/docs/sdk/charmcraft-config for guidance.
 
+name: identity-platform-login-ui-operator
 type: charm
+summary: Operator for Identity platform UI backend and proxy
+description: |
+  Operator for Identity platform UI backend and proxy
+links:
+  documentation: https://discourse.charmhub.io/t/identity-platform-login-ui-docs-index/12169
+  source: https://github.com/canonical/identity-platform-login-ui-operator
+  issues: https://github.com/canonical/identity-platform-login-ui-operator/issues
+
+assumes:
+  - k8s-api
+
+containers:
+  login-ui:
+    resource: oci-image
+
+# This field populates the Resources tab on Charmhub.
+resources:
+  oci-image:
+    type: oci-image
+    description: OCI image for login-ui
+    upstream-source: ghcr.io/canonical/identity-platform-login-ui:v0.15.0
+
+requires:
+  ingress:
+    interface: ingress
+  kratos-endpoint-info:
+    interface: kratos_endpoints
+    limit: 1
+  hydra-endpoint-info:
+    interface: hydra_endpoints
+    limit: 1
+  logging:
+    interface: loki_push_api
+    limit: 1
+  tracing:
+    interface: tracing
+    limit: 1
+  receive-ca-cert:
+    interface: certificate_transfer
+    description: |
+      Receive a CA cert.
+      This relation can be used with a local CA to obtain the CA cert that was used to sign proxied
+      endpoints.
+
+provides:
+  ui-endpoint-info:
+    interface: login_ui_endpoints
+    description: |
+      Provides the Identity Platform Login UI API endpoints to a related application
+  metrics-endpoint:
+    interface: prometheus_scrape
+    description: |
+      Provides application metrics to COS Prometheus instance
+  grafana-dashboard:
+    description: |
+      Forwards the built-in grafana dashboard(s) for monitoring identity-platform-login-ui-operator.
+    interface: grafana_dashboard
+
+config:
+  options:
+    log_level:
+      description: |
+        Acceptable values are: "info", "debug", "warning", "error" and "critical"
+      default: "info"
+      type: string
+
 bases:
   - build-on:
     - name: ubuntu
@@ -9,6 +76,7 @@ bases:
     run-on:
     - name: ubuntu
       channel: "22.04"
+
 parts:
   charm:
     charm-binary-python-packages:
