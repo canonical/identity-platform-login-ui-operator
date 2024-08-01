@@ -257,6 +257,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                 "PORT": str(APPLICATION_PORT),
                 "BASE_URL": self._domain_url,
                 "TRACING_ENABLED": False,
+                "AUTHORIZATION_ENABLED": False,
                 "LOG_LEVEL": self._log_level,
                 "LOG_FILE": self._log_path,
                 "DEBUG": self._log_level == "DEBUG",

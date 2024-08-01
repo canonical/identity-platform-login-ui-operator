@@ -157,6 +157,7 @@ def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
                     "PORT": TEST_PORT,
                     "BASE_URL": None,
                     "TRACING_ENABLED": False,
+                    "AUTHORIZATION_ENABLED": False,
                     "LOG_LEVEL": harness.charm._log_level,
                     "LOG_FILE": harness.charm._log_path,
                     "DEBUG": False,
@@ -272,6 +273,30 @@ def test_ui_endpoint_info(harness: Harness, mocker: MockerFixture) -> None:
     harness.add_relation_unit(relation_id, "hydra/0")
 
     mocked_service_patcher.assert_called_with(url.replace("http", "https").replace(":80", ""))
+
+
+def test_ui_endpoint_info_relation_databag(harness: Harness) -> None:
+    harness.set_can_connect(CONTAINER_NAME, True)
+    _, url = setup_ingress_relation(harness)
+    url = url.replace("http", "https").replace(":80", "")
+
+    relation_id = harness.add_relation("ui-endpoint-info", "requirer")
+    harness.add_relation_unit(relation_id, "requirer/0")
+
+    expected_data = {
+        "consent_url": f"{url}/ui/consent",
+        "error_url": f"{url}/ui/error",
+        "login_url": f"{url}/ui/login",
+        "oidc_error_url": f"{url}/ui/oidc_error",
+        "device_verification_url": f"{url}/ui/device_code",
+        "post_device_done_url": f"{url}/ui/device_complete",
+        "recovery_url": f"{url}/ui/reset_email",
+        "settings_url": f"{url}/ui/reset_password",
+    }
+
+    relation_data = harness.get_relation_data(relation_id, harness.model.app.name)
+
+    assert relation_data == expected_data
 
 
 def test_on_pebble_ready_with_loki(harness: Harness) -> None:
