@@ -49,26 +49,27 @@ jobs:
         run: |
           charmcraft pack --verbose
           echo "charm_path=$(find . -name '*.charm' -type f -print)" >> $GITHUB_OUTPUT
+          echo "charm_path=$(find . -name '*.charm' -type f -print)"
 
-      - name: Select charmhub channel
-        uses: canonical/charming-actions/channel@631c2d944da2bd12430f1f3a954c8fffcf2385cd # 2.4.0
-        id: select-channel
-        if: ${{ inputs.destination_channel == '' }}
+      # - name: Select charmhub channel
+      #   uses: canonical/charming-actions/channel@631c2d944da2bd12430f1f3a954c8fffcf2385cd # 2.4.0
+      #   id: select-channel
+      #   if: ${{ inputs.destination_channel == '' }}
 
       # Combine inputs from different sources to a single canonical value so later steps don't
       # need logic for picking the right one
-      - name: Parse and combine inputs
-        id: parse-inputs
-        run: |
-          # destination_channel
-          destination_channel="${{ inputs.destination_channel || steps.select-channel.outputs.name }}"
-          echo "setting output of destination_channel=$destination_channel"
-          echo "::set-output name=destination_channel::$destination_channel"
+      # - name: Parse and combine inputs
+      #   id: parse-inputs
+      #   run: |
+      #     # destination_channel
+      #     destination_channel="${{ inputs.destination_channel || steps.select-channel.outputs.name }}"
+      #     echo "setting output of destination_channel=$destination_channel"
+      #     echo "::set-output name=destination_channel::$destination_channel"
 
       - name: Upload charm to charmhub
-        uses: canonical/charming-actions/upload-charm@631c2d944da2bd12430f1f3a954c8fffcf2385cd # 2.4.0
+        uses: canonical/charming-actions/upload-charm@2.6.0
         with:
-          built-charm-path: ${{ steps.charm-path.outputs.charm_path }}
+          # built-charm-path: ${{ steps.charm-path.outputs.charm_path }}
           credentials: ${{ secrets.CHARMCRAFT_CREDENTIALS }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          channel: ${{ steps.parse-inputs.outputs.destination_channel }}
+          channel: latest/edge
