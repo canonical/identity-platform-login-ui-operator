@@ -28,8 +28,8 @@ resources:
 requires:
   ingress:
     interface: ingress
-  kratos-endpoint-info:
-    interface: kratos_endpoints
+  kratos-info:
+    interface: kratos_info
     limit: 1
   hydra-endpoint-info:
     interface: hydra_endpoints
