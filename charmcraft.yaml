@@ -23,7 +23,7 @@ resources:
   oci-image:
     type: oci-image
     description: OCI image for login-ui
-    upstream-source: ghcr.io/canonical/identity-platform-login-ui:v0.15.0
+    upstream-source: ghcr.io/canonical/identity-platform-login-ui:v0.16.0
 
 requires:
   ingress:
