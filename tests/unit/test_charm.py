@@ -31,7 +31,7 @@ def setup_ingress_relation(harness: Harness) -> Tuple[int, str]:
 
 
 def setup_kratos_relation(harness: Harness) -> int:
-    relation_id = harness.add_relation("kratos-endpoint-info", "kratos")
+    relation_id = harness.add_relation("kratos-info", "kratos")
     harness.add_relation_unit(relation_id, "kratos/0")
     harness.update_relation_data(
         relation_id,
@@ -39,6 +39,7 @@ def setup_kratos_relation(harness: Harness) -> int:
         {
             "admin_endpoint": f"http://kratos-admin-url:80/{harness.model.name}-kratos",
             "public_endpoint": f"http://kratos-public-url:80/{harness.model.name}-kratos",
+            "mfa_enabled": "True",
         },
     )
     return relation_id
@@ -154,6 +155,7 @@ def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
                 "environment": {
                     "HYDRA_ADMIN_URL": "",
                     "KRATOS_PUBLIC_URL": "",
+                    "KRATOS_ADMIN_URL": "",
                     "PORT": TEST_PORT,
                     "BASE_URL": None,
                     "TRACING_ENABLED": False,
@@ -195,18 +197,25 @@ def test_layer_updated_with_tracing_endpoint_info(harness: Harness) -> None:
     assert pebble_env["TRACING_ENABLED"]
 
 
-def test_layer_updated_with_kratos_endpoint_info(harness: Harness) -> None:
-    """Test Pebble Layer when relation data is in place."""
+def test_layer_env_updated_with_kratos_info(harness: Harness) -> None:
+    """Test Pebble Layer when kratos relation data is in place."""
     harness.set_leader(True)
     harness.set_can_connect(CONTAINER_NAME, True)
     harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
     kratos_relation_id = setup_kratos_relation(harness)
 
     assert (
-        harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
-            "KRATOS_PUBLIC_URL"
-        ]
+        harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"]["KRATOS_PUBLIC_URL"]
         == harness.get_relation_data(kratos_relation_id, "kratos")["public_endpoint"]
+    )
+
+    assert (
+            harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"]["KRATOS_ADMIN_URL"]
+            == harness.get_relation_data(kratos_relation_id, "kratos")["admin_endpoint"]
+    )
+    assert (
+            str(harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"]["MFA_ENABLED"])
+            == harness.get_relation_data(kratos_relation_id, "kratos")["mfa_enabled"]
     )
 
 

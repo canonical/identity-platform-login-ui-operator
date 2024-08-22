@@ -43,7 +43,7 @@ with [kratos-operator](https://github.com/canonical/kratos-operator). To
 integrate them, run:
 
 ```shell
-juju integrate kratos:kratos-endpoint-info identity-platform-login-ui-operator:kratos-endpoint-info
+juju integrate kratos:kratos-info identity-platform-login-ui-operator:kratos-info
 juju integrate kratos:ui-endpoint-info identity-platform-login-ui-operator:ui-endpoint-info
 ```
 

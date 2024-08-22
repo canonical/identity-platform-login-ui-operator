@@ -8,7 +8,8 @@
 
 import logging
 import re
-from typing import Optional
+from ast import literal_eval
+from typing import Dict, Optional
 
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.hydra.v0.hydra_endpoints import (
@@ -20,10 +21,7 @@ from charms.identity_platform_login_ui_operator.v0.login_ui_endpoints import (
     LoginUIEndpointsProvider,
     LoginUINonLeaderOperationError,
 )
-from charms.kratos.v0.kratos_endpoints import (
-    KratosEndpointsRelationDataMissingError,
-    KratosEndpointsRequirer,
-)
+from charms.kratos.v0.kratos_info import KratosInfoRelationDataMissingError, KratosInfoRequirer
 from charms.loki_k8s.v0.loki_push_api import LogProxyConsumer, PromtailDigestError
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
@@ -60,7 +58,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         super().__init__(*args)
         self._container = self.unit.get_container(WORKLOAD_CONTAINER_NAME)
         self._hydra_relation_name = "hydra-endpoint-info"
-        self._kratos_relation_name = "kratos-endpoint-info"
+        self._kratos_relation_name = "kratos-info"
         self._prometheus_scrape_relation_name = "metrics-endpoint"
         self._loki_push_api_relation_name = "logging"
         self._grafana_dashboard_relation_name = "grafana-dashboard"
@@ -80,9 +78,8 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             redirect_https=False,
         )
 
-        self.kratos_endpoints = KratosEndpointsRequirer(
-            self, relation_name=self._kratos_relation_name
-        )
+        self._kratos_info = KratosInfoRequirer(self, relation_name=self._kratos_relation_name)
+
         self.hydra_endpoints = HydraEndpointsRequirer(
             self, relation_name=self._hydra_relation_name
         )
@@ -245,6 +242,8 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
     @property
     def _login_ui_layer(self) -> Layer:
+        kratos_info = self._get_kratos_info()
+
         # Define container configuration
         container = {
             "override": "replace",
@@ -253,7 +252,8 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             "startup": "enabled",
             "environment": {
                 "HYDRA_ADMIN_URL": self._get_hydra_endpoint_info(),
-                "KRATOS_PUBLIC_URL": self._get_kratos_endpoint_info(),
+                "KRATOS_PUBLIC_URL": kratos_info.get("public_endpoint", ""),
+                "KRATOS_ADMIN_URL": kratos_info.get("admin_endpoint", ""),
                 "PORT": str(APPLICATION_PORT),
                 "BASE_URL": self._domain_url,
                 "TRACING_ENABLED": False,
@@ -263,6 +263,9 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                 "DEBUG": self._log_level == "DEBUG",
             },
         }
+
+        if self._kratos_info.is_ready():
+            container["environment"]["MFA_ENABLED"] = literal_eval(kratos_info.get("mfa_enabled"))
 
         if self._tracing_ready:
             container["environment"]["OTEL_HTTP_ENDPOINT"] = self._get_tracing_endpoint_info_http()
@@ -295,16 +298,14 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
         return self.tracing.otlp_grpc_endpoint() or ""
 
-    def _get_kratos_endpoint_info(self) -> str:
-        kratos_public_url = ""
-        if self.model.relations[self._kratos_relation_name]:
+    def _get_kratos_info(self) -> Dict:
+        kratos_info = {}
+        if self._kratos_info.is_ready():
             try:
-                kratos_endpoints = self.kratos_endpoints.get_kratos_endpoints()
-            except KratosEndpointsRelationDataMissingError:
-                logger.info("No kratos-endpoint-info relation data found")
-            if kratos_endpoints:
-                kratos_public_url = kratos_endpoints["public_endpoint"]
-        return kratos_public_url
+                kratos_info = self._kratos_info.get_kratos_info()
+            except KratosInfoRelationDataMissingError:
+                logger.info("No kratos-info relation data found")
+        return kratos_info
 
     def _update_login_ui_endpoint_relation_data(self, event: RelationEvent) -> None:
         endpoint = self._domain_url or ""
