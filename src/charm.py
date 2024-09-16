@@ -25,7 +25,7 @@ from charms.kratos.v0.kratos_info import KratosInfoRelationDataMissingError, Kra
 from charms.loki_k8s.v0.loki_push_api import LogProxyConsumer, PromtailDigestError
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
-from charms.tempo_k8s.v0.tracing import TracingEndpointRequirer
+from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
 from charms.traefik_k8s.v2.ingress import (
     IngressPerAppReadyEvent,
     IngressPerAppRequirer,
@@ -88,6 +88,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self.tracing = TracingEndpointRequirer(
             self,
             relation_name=self._tracing_relation_name,
+            protocols=["otlp_http", "otlp_grpc"],
         )
 
         self.metrics_endpoint = MetricsEndpointProvider(
@@ -268,8 +269,8 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             container["environment"]["MFA_ENABLED"] = literal_eval(kratos_info.get("mfa_enabled"))
 
         if self._tracing_ready:
-            container["environment"]["OTEL_HTTP_ENDPOINT"] = self._get_tracing_endpoint_info_http()
-            container["environment"]["OTEL_GRPC_ENDPOINT"] = self._get_tracing_endpoint_info_grpc()
+            container["environment"]["OTEL_HTTP_ENDPOINT"] = self.tracing.get_endpoint("otlp_http")
+            container["environment"]["OTEL_GRPC_ENDPOINT"] = self.tracing.get_endpoint("otlp_grpc")
             container["environment"]["TRACING_ENABLED"] = True
 
         # Define Pebble layer configuration
@@ -285,18 +286,6 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             },
         }
         return Layer(pebble_layer)
-
-    def _get_tracing_endpoint_info_http(self) -> str:
-        if not self._tracing_ready:
-            return ""
-
-        return self.tracing.otlp_http_endpoint() or ""
-
-    def _get_tracing_endpoint_info_grpc(self) -> str:
-        if not self._tracing_ready:
-            return ""
-
-        return self.tracing.otlp_grpc_endpoint() or ""
 
     def _get_kratos_info(self) -> Dict:
         kratos_info = {}
