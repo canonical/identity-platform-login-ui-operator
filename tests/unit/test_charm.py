@@ -94,8 +94,10 @@ def setup_tempo_relation(harness: Harness) -> int:
     harness.add_relation_unit(relation_id, "tempo-k8s/0")
 
     trace_databag = {
-        "host": '"tempo-k8s-0.tempo-k8s-endpoints.namespace.svc.cluster.local"',
-        "ingesters": '[{"protocol": "tempo", "port": 3200}, {"protocol": "otlp_grpc", "port": 4317}, {"protocol": "otlp_http", "port": 4318}, {"protocol": "zipkin", "port": 9411}, {"protocol": "jaeger_http_thrift", "port": 14268}, {"protocol": "jaeger_grpc", "port": 14250}]',
+        "receivers": '[{"protocol": {"name": "otlp_http", "type": "http"},'
+        '"url": "http://tempo-k8s-0.tempo-k8s-endpoints.namespace.svc.cluster.local:4318"},'
+        '{"protocol": {"name": "otlp_grpc", "type": "grpc"},'
+        '"url": "http://tempo-k8s-0.tempo-k8s-endpoints.namespace.svc.cluster.local:4317"}]',
     }
     harness.update_relation_data(
         relation_id,
@@ -188,11 +190,11 @@ def test_layer_updated_with_tracing_endpoint_info(harness: Harness) -> None:
 
     assert (
         pebble_env["OTEL_HTTP_ENDPOINT"]
-        == "tempo-k8s-0.tempo-k8s-endpoints.namespace.svc.cluster.local:4318"
+        == "http://tempo-k8s-0.tempo-k8s-endpoints.namespace.svc.cluster.local:4318"
     )
     assert (
         pebble_env["OTEL_GRPC_ENDPOINT"]
-        == "tempo-k8s-0.tempo-k8s-endpoints.namespace.svc.cluster.local:4317"
+        == "http://tempo-k8s-0.tempo-k8s-endpoints.namespace.svc.cluster.local:4317"
     )
     assert pebble_env["TRACING_ENABLED"]
 
@@ -205,17 +207,25 @@ def test_layer_env_updated_with_kratos_info(harness: Harness) -> None:
     kratos_relation_id = setup_kratos_relation(harness)
 
     assert (
-        harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"]["KRATOS_PUBLIC_URL"]
+        harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
+            "KRATOS_PUBLIC_URL"
+        ]
         == harness.get_relation_data(kratos_relation_id, "kratos")["public_endpoint"]
     )
 
     assert (
-            harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"]["KRATOS_ADMIN_URL"]
-            == harness.get_relation_data(kratos_relation_id, "kratos")["admin_endpoint"]
+        harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
+            "KRATOS_ADMIN_URL"
+        ]
+        == harness.get_relation_data(kratos_relation_id, "kratos")["admin_endpoint"]
     )
     assert (
-            str(harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"]["MFA_ENABLED"])
-            == harness.get_relation_data(kratos_relation_id, "kratos")["mfa_enabled"]
+        str(
+            harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
+                "MFA_ENABLED"
+            ]
+        )
+        == harness.get_relation_data(kratos_relation_id, "kratos")["mfa_enabled"]
     )
 
 
