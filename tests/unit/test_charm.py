@@ -16,6 +16,12 @@ CONTAINER_NAME = "login-ui"
 TEST_PORT = "8080"
 
 
+def setup_peer_relation(harness: Harness) -> Tuple[int, str]:
+    app_name = "identity-platform-login-ui"
+    relation_id = harness.add_relation("identity-platform-login-ui", app_name)
+    return relation_id, app_name
+
+
 def setup_ingress_relation(harness: Harness) -> Tuple[int, str]:
     """Set up ingress relation."""
     harness.set_leader(True)
@@ -125,6 +131,7 @@ def test_install_can_connect(harness: Harness) -> None:
     """Test installation with connection."""
     harness.set_leader(True)
     harness.set_can_connect(CONTAINER_NAME, True)
+    setup_peer_relation(harness)
     harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
 
     assert harness.charm.unit.status == ActiveStatus()
@@ -139,10 +146,19 @@ def test_install_can_not_connect(harness: Harness) -> None:
     assert harness.charm.unit.status == WaitingStatus("Waiting to connect to Login_UI container")
 
 
+def test_missing_peer_relation_on_pebble_ready(harness: Harness) -> None:
+    harness.set_leader(True)
+    harness.set_can_connect(CONTAINER_NAME, True)
+    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
+
+    assert harness.charm.unit.status == WaitingStatus("Waiting for peer relation")
+
+
 def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
     """Test Pebble Layer after updates."""
     harness.set_leader(True)
     harness.set_can_connect(CONTAINER_NAME, True)
+    setup_peer_relation(harness)
     harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
 
     expected_layer = {
@@ -160,6 +176,7 @@ def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
                     "KRATOS_ADMIN_URL": "",
                     "PORT": TEST_PORT,
                     "BASE_URL": None,
+                    "COOKIES_ENCRYPTION_KEY": harness.charm._cookie_encryption_key,
                     "TRACING_ENABLED": False,
                     "AUTHORIZATION_ENABLED": False,
                     "LOG_LEVEL": harness.charm._log_level,
@@ -177,12 +194,14 @@ def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
     }
 
     assert harness.charm._login_ui_layer.to_dict() == expected_layer
+    assert len(harness.charm._cookie_encryption_key) == 32
 
 
 def test_layer_updated_with_tracing_endpoint_info(harness: Harness) -> None:
     """Test Pebble Layer when relation data is in place."""
     harness.set_leader(True)
     harness.set_can_connect(CONTAINER_NAME, True)
+    setup_peer_relation(harness)
     harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
     setup_tempo_relation(harness)
 
@@ -203,6 +222,7 @@ def test_layer_env_updated_with_kratos_info(harness: Harness) -> None:
     """Test Pebble Layer when kratos relation data is in place."""
     harness.set_leader(True)
     harness.set_can_connect(CONTAINER_NAME, True)
+    setup_peer_relation(harness)
     harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
     kratos_relation_id = setup_kratos_relation(harness)
 
@@ -233,6 +253,7 @@ def test_layer_updated_with_hydra_endpoint_info(harness: Harness) -> None:
     """Test Pebble Layer when relation data is in place."""
     harness.set_leader(True)
     harness.set_can_connect(CONTAINER_NAME, True)
+    setup_peer_relation(harness)
     harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
     hydra_relation_id = setup_hydra_relation(harness)
 
@@ -250,6 +271,7 @@ def test_layer_updated_with_endpoint_info(harness: Harness) -> None:
     """Test Pebble Layer when relation data is in place."""
     harness.set_leader(True)
     harness.set_can_connect(CONTAINER_NAME, True)
+    setup_peer_relation(harness)
     harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
     hydra_relation_id = setup_hydra_relation(harness)
     kratos_relation_id = setup_kratos_relation(harness)
@@ -271,6 +293,7 @@ def test_layer_updated_with_endpoint_info(harness: Harness) -> None:
 def test_layer_updated_with_ingress_ready(harness: Harness) -> None:
     harness.set_leader(True)
     harness.set_can_connect(CONTAINER_NAME, True)
+    setup_peer_relation(harness)
     harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
     _, url = setup_ingress_relation(harness)
 
@@ -321,6 +344,7 @@ def test_ui_endpoint_info_relation_databag(harness: Harness) -> None:
 def test_on_pebble_ready_with_loki(harness: Harness) -> None:
     harness.set_leader(True)
     harness.set_can_connect(CONTAINER_NAME, True)
+    setup_peer_relation(harness)
     container = harness.model.unit.get_container(CONTAINER_NAME)
     harness.charm.on.login_ui_pebble_ready.emit(container)
     setup_loki_relation(harness)

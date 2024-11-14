@@ -23,7 +23,7 @@ resources:
   oci-image:
     type: oci-image
     description: OCI image for login-ui
-    upstream-source: ghcr.io/canonical/identity-platform-login-ui:v0.18.1
+    upstream-source: ghcr.io/canonical/identity-platform-login-ui:v0.18.4
 
 requires:
   ingress:
@@ -60,6 +60,10 @@ provides:
     description: |
       Forwards the built-in grafana dashboard(s) for monitoring identity-platform-login-ui-operator.
     interface: grafana_dashboard
+
+peers:
+  identity-platform-login-ui:
+    interface: identity_platform_login_ui_peers
 
 config:
   options:

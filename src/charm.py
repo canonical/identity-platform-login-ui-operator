@@ -8,6 +8,7 @@
 
 import logging
 import re
+import secrets
 from ast import literal_eval
 from typing import Dict, Optional
 
@@ -40,11 +41,17 @@ from ops.charm import (
     WorkloadEvent,
 )
 from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, Relation, WaitingStatus
 from ops.pebble import ChangeError, Error, Layer
 
 from certificate_transfer_integration import CertTransfer
-from constants import APPLICATION_PORT, CERTIFICATE_TRANSFER_NAME, WORKLOAD_CONTAINER_NAME
+from constants import (
+    APPLICATION_PORT,
+    CERTIFICATE_TRANSFER_NAME,
+    COOKIES_KEY,
+    PEER,
+    WORKLOAD_CONTAINER_NAME,
+)
 from utils import normalise_url
 
 logger = logging.getLogger(__name__)
@@ -203,6 +210,15 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting to connect to Login_UI container")
             return
 
+        if not self._peers:
+            self.unit.status = WaitingStatus("Waiting for peer relation")
+            logger.info("Waiting for peer relation. Deferring the event.")
+            event.defer()
+            return
+
+        if not self._cookie_encryption_key:
+            self._peers.data[self.app][COOKIES_KEY] = secrets.token_hex(16)
+
         self.unit.status = MaintenanceStatus("Configuration in progress")
         self.cert_transfer.push_ca_certs()
 
@@ -228,6 +244,18 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             logger.info("This app no longer has ingress")
         self._update_pebble_layer(event)
         self._update_login_ui_endpoint_relation_data(event)
+
+    @property
+    def _peers(self) -> Optional[Relation]:
+        """Fetch the peer relation."""
+        return self.model.get_relation(PEER)
+
+    @property
+    def _cookie_encryption_key(self) -> Optional[str]:
+        """Retrieve cookie encryption key from the peer data bucket."""
+        if not self._peers:
+            return None
+        return self._peers.data[self.app].get(COOKIES_KEY, None)
 
     @property
     def _log_level(self) -> str:
@@ -257,6 +285,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                 "KRATOS_ADMIN_URL": kratos_info.get("admin_endpoint", ""),
                 "PORT": str(APPLICATION_PORT),
                 "BASE_URL": self._domain_url,
+                "COOKIES_ENCRYPTION_KEY": self._cookie_encryption_key,
                 "TRACING_ENABLED": False,
                 "AUTHORIZATION_ENABLED": False,
                 "LOG_LEVEL": self._log_level,
