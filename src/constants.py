@@ -6,3 +6,5 @@
 WORKLOAD_CONTAINER_NAME = "login-ui"
 APPLICATION_PORT = 8080
 CERTIFICATE_TRANSFER_NAME = "receive-ca-cert"
+PEER = "identity-platform-login-ui"
+COOKIES_KEY = "cookies_key"
