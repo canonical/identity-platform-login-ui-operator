@@ -22,7 +22,7 @@ from charms.identity_platform_login_ui_operator.v0.login_ui_endpoints import (
     LoginUINonLeaderOperationError,
 )
 from charms.kratos.v0.kratos_info import KratosInfoRelationDataMissingError, KratosInfoRequirer
-from charms.loki_k8s.v0.loki_push_api import LogProxyConsumer, PromtailDigestError
+from charms.loki_k8s.v1.loki_push_api import LogForwarder
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
@@ -64,8 +64,6 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self._grafana_dashboard_relation_name = "grafana-dashboard"
         self._tracing_relation_name = "tracing"
         self._login_ui_service_command = "/usr/bin/identity-platform-login-ui serve"
-        self._log_dir = "/var/log"
-        self._log_path = f"{self._log_dir}/ui.log"
 
         self.service_patcher = KubernetesServicePatch(
             self, [("identity-platform-login-ui", APPLICATION_PORT)]
@@ -106,12 +104,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             ],
         )
 
-        self.loki_consumer = LogProxyConsumer(
-            self,
-            log_files=[self._log_path],
-            relation_name=self._loki_push_api_relation_name,
-            container_name=WORKLOAD_CONTAINER_NAME,
-        )
+        self._log_forwarder = LogForwarder(self, relation_name=self._loki_push_api_relation_name)
 
         self._grafana_dashboards = GrafanaDashboardProvider(
             self, relation_name=self._grafana_dashboard_relation_name
@@ -144,11 +137,6 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self.framework.observe(self.ingress.on.ready, self._on_ingress_ready)
         self.framework.observe(self.ingress.on.revoked, self._on_ingress_revoked)
 
-        self.framework.observe(
-            self.loki_consumer.on.promtail_digest_error,
-            self._promtail_error,
-        )
-
     def _get_version(self) -> Optional[str]:
         cmd = ["identity-platform-login-ui", "version"]
         try:
@@ -174,10 +162,6 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting to connect to Login_UI container")
             return
 
-        if not self._container.isdir(self._log_dir):
-            self._container.make_dir(path=self._log_dir, make_parents=True)
-            logger.info(f"Created directory {self._log_dir}")
-
         self._set_version()
         self._update_pebble_layer(event)
 
@@ -187,10 +171,6 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             logger.info("Cannot connect to Login_UI container. Deferring the event.")
             self.unit.status = WaitingStatus("Waiting to connect to Login_UI container")
             return
-
-        if not self._container.isdir(self._log_dir):
-            self._container.make_dir(path=self._log_dir, make_parents=True)
-            logger.info(f"Created directory {self._log_dir}")
 
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:
         """Handle changed configuration."""
@@ -260,7 +240,6 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                 "TRACING_ENABLED": False,
                 "AUTHORIZATION_ENABLED": False,
                 "LOG_LEVEL": self._log_level,
-                "LOG_FILE": self._log_path,
                 "DEBUG": self._log_level == "DEBUG",
             },
         }
@@ -315,9 +294,6 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         except HydraEndpointsRelationMissingError:
             logger.info("No hydra-endpoint-info relation found")
         return hydra_url
-
-    def _promtail_error(self, event: PromtailDigestError) -> None:
-        logger.error(event.message)
 
 
 if __name__ == "__main__":  # pragma: nocover

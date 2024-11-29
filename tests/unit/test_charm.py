@@ -163,7 +163,6 @@ def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
                     "TRACING_ENABLED": False,
                     "AUTHORIZATION_ENABLED": False,
                     "LOG_LEVEL": harness.charm._log_level,
-                    "LOG_FILE": harness.charm._log_path,
                     "DEBUG": False,
                 },
             }
