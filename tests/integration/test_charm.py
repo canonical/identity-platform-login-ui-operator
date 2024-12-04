@@ -2,72 +2,116 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import http
+import json
 import logging
-from pathlib import Path
+from typing import Optional
 
 import pytest
-import requests
-import yaml
+from httpx import AsyncClient
 from pytest_operator.plugin import OpsTest
+
+from tests.integration.conftest import (
+    CA_APP,
+    INGRESS_APP,
+    ISTIO_CONTROL_PLANE_CHARM,
+    ISTIO_INGRESS_CHARM,
+    LOGIN_UI_APP,
+    LOGIN_UI_IMAGE,
+    PUBLIC_INGRESS_DOMAIN,
+)
 
 logger = logging.getLogger(__name__)
 
-METADATA = yaml.safe_load(Path("./charmcraft.yaml").read_text())
-APP_NAME = METADATA["name"]
-TRAEFIK = "traefik-k8s"
-TRAEFIK_PUBLIC_APP = "traefik-public"
-
-
-async def get_unit_address(ops_test: OpsTest, app_name: str, unit_num: int) -> str:
-    """Get private address of a unit."""
-    status = await ops_test.model.get_status()  # noqa: F821
-    return status["applications"][app_name]["units"][f"{app_name}/{unit_num}"]["address"]
-
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest):
-    """Build the charm-under-test and deploy it.
-
-    Assert on the unit status before any relations/configurations take place.
-    """
-    charm = await ops_test.build_charm(".")
-    resources = {"oci-image": METADATA["resources"]["oci-image"]["upstream-source"]}
-    await ops_test.model.deploy(
-        charm, resources=resources, application_name=APP_NAME, trust=True, series="jammy"
+async def test_build_and_deploy(ops_test: OpsTest) -> None:
+    await ops_test.track_model(
+        alias="istio-system",
+        model_name="istio-system",
+        destroy_storage=True,
     )
+    istio_system = ops_test.models.get("istio-system")
 
-    async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(
-            apps=[APP_NAME],
-            status="active",
-            raise_on_blocked=True,
-            timeout=1000,
-        )
-        assert ops_test.model.applications[APP_NAME].units[0].workload_status == "active"
-
-
-async def test_ingress_relation(ops_test: OpsTest):
-    await ops_test.model.deploy(
-        TRAEFIK,
-        application_name=TRAEFIK_PUBLIC_APP,
+    await istio_system.model.deploy(
+        application_name=ISTIO_CONTROL_PLANE_CHARM,
+        entity_url=ISTIO_CONTROL_PLANE_CHARM,
         channel="latest/edge",
-        config={"external_hostname": "some_hostname"},
+        trust=True,
+    )
+    await istio_system.model.wait_for_idle(
+        [ISTIO_CONTROL_PLANE_CHARM],
+        status="active",
+        timeout=5 * 60,
     )
 
-    await ops_test.model.add_relation(f"{APP_NAME}:ingress", TRAEFIK_PUBLIC_APP)
+    charm = await ops_test.build_charm(".")
+    await ops_test.model.deploy(
+        entity_url=str(charm),
+        resources={"oci-image": LOGIN_UI_IMAGE},
+        application_name=LOGIN_UI_APP,
+        trust=True,
+        series="jammy",
+    )
+
+    await ops_test.model.deploy(
+        ISTIO_INGRESS_CHARM,
+        application_name=INGRESS_APP,
+        trust=True,
+        channel="latest/edge",
+        config={"external_hostname": PUBLIC_INGRESS_DOMAIN},
+    )
+
+    await ops_test.model.deploy(
+        CA_APP,
+        channel="latest/stable",
+        trust=True,
+    )
+
+    await ops_test.model.integrate(f"{INGRESS_APP}:certificates", f"{CA_APP}:certificates")
+    await ops_test.model.integrate(LOGIN_UI_APP, INGRESS_APP)
 
     await ops_test.model.wait_for_idle(
-        apps=[TRAEFIK_PUBLIC_APP],
+        apps=[LOGIN_UI_APP, INGRESS_APP, CA_APP],
         status="active",
         raise_on_blocked=True,
-        timeout=1000,
+        timeout=5 * 60,
     )
 
 
-async def test_has_ingress(ops_test: OpsTest):
-    # Get the traefik address and try to reach identity-platform-login-ui
-    public_address = await get_unit_address(ops_test, TRAEFIK_PUBLIC_APP, 0)
+async def test_ingress_integration(
+    ops_test: OpsTest,
+    leader_ingress_integration_data: Optional[dict],
+    public_ingress_address: str,
+    http_client: AsyncClient,
+) -> None:
+    assert leader_ingress_integration_data
+    assert leader_ingress_integration_data["ingress"]
 
-    resp = requests.get(f"http://{public_address}/{ops_test.model.name}-{APP_NAME}/ui/login")
+    data = json.loads(leader_ingress_integration_data["ingress"])
+    assert data["url"] == f"https://{PUBLIC_INGRESS_DOMAIN}/{ops_test.model_name}-{LOGIN_UI_APP}"
 
-    assert resp.status_code == 200
+    # Test HTTP to HTTPS redirection
+    http_endpoint = (
+        f"http://{public_ingress_address}/{ops_test.model_name}-{LOGIN_UI_APP}/ui/login"
+    )
+    resp = await http_client.get(
+        http_endpoint,
+        headers={"Host": PUBLIC_INGRESS_DOMAIN},
+    )
+    assert resp.status_code == http.HTTPStatus.MOVED_PERMANENTLY, (
+        f"Expected HTTP {http.HTTPStatus.MOVED_PERMANENTLY} for {http_endpoint}, got {resp.status_code}."
+    )
+
+    # Test HTTPS endpoint
+    https_endpoint = (
+        f"https://{public_ingress_address}/{ops_test.model_name}-{LOGIN_UI_APP}/ui/login"
+    )
+    resp = await http_client.get(
+        https_endpoint,
+        headers={"Host": PUBLIC_INGRESS_DOMAIN},
+        extensions={"sni_hostname": PUBLIC_INGRESS_DOMAIN},
+    )
+    assert resp.status_code == http.HTTPStatus.OK, (
+        f"Expected HTTP {http.HTTPStatus.OK} for {https_endpoint}, got {resp.status_code}."
+    )

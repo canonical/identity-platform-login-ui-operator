@@ -49,15 +49,17 @@ juju integrate kratos:ui-endpoint-info identity-platform-login-ui-operator:ui-en
 
 ### Ingress
 
-The Identity Platform Login UI Operator offers integration with
-the [traefik-k8s-operator](https://github.com/canonical/traefik-k8s-operator)
-for ingress.
+This charm requires a `ingress` integration with
+the [istio-ingress-k8s](https://github.com/canonical/istio-ingress-k8s-operator)
+to expose the public API endpoints.
 
-If you have a traefik deployed you can provide ingress with the following
-command:
+Make sure you've deployed
+the [istio-k8s](https://github.com/canonical/istio-k8s-operator) charm
+beforehand.
 
 ```shell
-juju integrate traefik-admin identity-platform-login-ui-operator:ingress
+juju deploy istio-ingress-k8s public-ingress --channel latest/edge --trust
+juju integrate identity-platform-login-ui-operator public-ingress
 ```
 
 ## OCI Images

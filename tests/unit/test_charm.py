@@ -25,12 +25,12 @@ def setup_peer_relation(harness: Harness) -> Tuple[int, str]:
 def setup_ingress_relation(harness: Harness) -> Tuple[int, str]:
     """Set up ingress relation."""
     harness.set_leader(True)
-    relation_id = harness.add_relation("ingress", "traefik")
-    harness.add_relation_unit(relation_id, "traefik/0")
+    relation_id = harness.add_relation("ingress", "public-ingress")
+    harness.add_relation_unit(relation_id, "public-ingress/0")
     url = f"http://ingress:80/{harness.model.name}-identity-platform-login-ui"
     harness.update_relation_data(
         relation_id,
-        "traefik",
+        "public-ingress",
         {"ingress": json.dumps({"url": url})},
     )
     return relation_id, url
