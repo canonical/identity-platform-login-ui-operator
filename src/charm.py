@@ -49,6 +49,7 @@ from constants import (
     APPLICATION_PORT,
     CERTIFICATE_TRANSFER_NAME,
     COOKIES_KEY,
+    INGRESS_INTEGRATION_NAME,
     PEER,
     WORKLOAD_CONTAINER_NAME,
 )
@@ -77,7 +78,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         )
         self.ingress = IngressPerAppRequirer(
             self,
-            relation_name="ingress",
+            relation_name=INGRESS_INTEGRATION_NAME,
             port=APPLICATION_PORT,
             strip_prefix=True,
             redirect_https=False,
