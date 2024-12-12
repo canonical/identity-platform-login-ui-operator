@@ -12,6 +12,7 @@ import secrets
 from ast import literal_eval
 from typing import Dict, Optional
 
+import ops
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.hydra.v0.hydra_endpoints import (
     HydraEndpointsRelationDataMissingError,
@@ -22,6 +23,7 @@ from charms.identity_platform_login_ui_operator.v0.login_ui_endpoints import (
     LoginUIEndpointsProvider,
     LoginUINonLeaderOperationError,
 )
+from charms.istio_beacon_k8s.v0.service_mesh import ServiceMeshConsumer
 from charms.kratos.v0.kratos_info import KratosInfoRelationDataMissingError, KratosInfoRequirer
 from charms.loki_k8s.v1.loki_push_api import LogForwarder
 from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
@@ -40,7 +42,6 @@ from ops.charm import (
     RelationEvent,
     WorkloadEvent,
 )
-from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, Relation, WaitingStatus
 from ops.pebble import ChangeError, Error, Layer
 
@@ -124,6 +125,8 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             self._update_pebble_layer,
             CERTIFICATE_TRANSFER_NAME,
         )
+
+        self.service_mesh = ServiceMeshConsumer(self)
 
         self.framework.observe(self.on.login_ui_pebble_ready, self._on_login_ui_pebble_ready)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
@@ -327,4 +330,4 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
 
 if __name__ == "__main__":  # pragma: nocover
-    main(IdentityPlatformLoginUiOperatorCharm)
+    ops.main(IdentityPlatformLoginUiOperatorCharm)
