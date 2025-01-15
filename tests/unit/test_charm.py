@@ -46,6 +46,7 @@ def setup_kratos_relation(harness: Harness) -> int:
             "admin_endpoint": f"http://kratos-admin-url:80/{harness.model.name}-kratos",
             "public_endpoint": f"http://kratos-public-url:80/{harness.model.name}-kratos",
             "mfa_enabled": "True",
+            "oidc_webauthn_sequencing_enabled": "False",
         },
     )
     return relation_id
@@ -245,6 +246,14 @@ def test_layer_env_updated_with_kratos_info(harness: Harness) -> None:
             ]
         )
         == harness.get_relation_data(kratos_relation_id, "kratos")["mfa_enabled"]
+    )
+    assert (
+            str(
+                harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
+                    "OIDC_WEBAUTHN_SEQUENCING_ENABLED"
+                ]
+            )
+            == harness.get_relation_data(kratos_relation_id, "kratos")["oidc_webauthn_sequencing_enabled"]
     )
 
 
