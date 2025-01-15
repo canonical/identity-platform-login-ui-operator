@@ -50,7 +50,7 @@ async def test_ingress_relation(ops_test: OpsTest):
     await ops_test.model.deploy(
         TRAEFIK,
         application_name=TRAEFIK_PUBLIC_APP,
-        channel="latest/edge",
+        channel="latest/stable",
         config={"external_hostname": "some_hostname"},
     )
 
