@@ -275,6 +275,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
         if self._kratos_info.is_ready():
             container["environment"]["MFA_ENABLED"] = literal_eval(kratos_info.get("mfa_enabled"))
+            container["environment"]["OIDC_WEBAUTHN_SEQUENCING_ENABLED"] = literal_eval(kratos_info.get("oidc_webauthn_sequencing_enabled"))
 
         if self._tracing_ready:
             container["environment"]["OTEL_HTTP_ENDPOINT"] = self.tracing.get_endpoint("otlp_http")
