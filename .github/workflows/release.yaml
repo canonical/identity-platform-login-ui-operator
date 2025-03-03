@@ -1,27 +1,35 @@
-# reusable workflow triggered manually
-name: Release charm to other tracks and channels
+name: release
 
 on:
   workflow_dispatch:
-    inputs:
-      destination-channel:
-        description: 'Destination Channel'
-        required: true
-      origin-channel:
-        description: 'Origin Channel'
-        required: true
+  push:
+    branches:
+    - main
+    - "track/**"
+
+permissions:
+    contents: write
+    pull-requests: write
 
 jobs:
-  promote-charm:
-    name: Promote charm
-    runs-on: ubuntu-22.04
+  release-please:
+    runs-on: ubuntu-latest
     steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:   
+          token: ${{ secrets.PAT_TOKEN }}
+          # optional. customize path to release-please-config.json
+          config-file: release-please-config.json
+          # optional. customize path to .release-please-manifest.json
+          manifest-file: .release-please-manifest.json
+          # target adjusts for track releases
+          target-branch: ${{ github.ref_name }}
+          # ensure release-please manifest has the component set to track-<version> in track branches
+          include-component-in-tag: ${{ contains(github.ref_name, 'track') }}
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - name: Release charm to channel
-        uses: canonical/charming-actions/release-charm@934193396735701141a1decc3613818e412da606 # 2.6.3
-        with:
-          credentials: ${{ secrets.CHARMCRAFT_CREDENTIALS }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          destination-channel: ${{ github.event.inputs.destination-channel }}
-          origin-channel: ${{ github.event.inputs.origin-channel }}
-          base-channel: '22.04'
+      - if: ${{ steps.release.outputs.pr != '' }}
+        run: |
+          gh pr merge --auto --merge ${{ fromJSON(steps.release.outputs.pr).number }} || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
