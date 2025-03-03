@@ -2,16 +2,10 @@
 name: Publish
 
 on:
-  workflow_call:
-    inputs:
-      source_branch:
-        description: Github branch from this repo to publish.  If blank, will use the default branch
-        default: ''
-        required: false
-        type: string
-    secrets:
-      CHARMCRAFT_CREDENTIALS:
-        required: true
+  push:
+    tags:
+      - "v**"
+      - "track**"  
 
   workflow_dispatch:
     inputs:
@@ -25,23 +19,52 @@ on:
         required: false
         default: ''
         type: string
+      override-ci:
+        description: Override standard release flow
+        required: true  
+        type: boolean
 
 jobs:
-  publish-charm:
-    name: Publish Charm
-    runs-on: ubuntu-22.04
-
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      track: ${{ steps.check_step.outputs.track }}
+      channel: ${{ steps.export.outputs.channel }}
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           fetch-depth: 0
-          ref: ${{ inputs.source_branch }}
+      - name: Get current branch
+        id: check_step
+        run: |
+          raw=$(git branch -r --contains ${{ github.ref }})
+          echo $raw
+          track=${raw##*/}
+          echo "track=$track" >> $GITHUB_OUTPUT
+          echo "Track is $track."  
+      - name: Get channel 
+        if: ${{ steps.check_step.outputs.track == 'main'}}
+        run: echo "channel=latest/edge" >> $GITHUB_ENV
+      - name: Get channel 
+        if: ${{ steps.check_step.outputs.track != 'main'}}
+        run: echo "channel=${{ steps.check_step.outputs.track }}/edge" >> $GITHUB_ENV
+      - name: Export channel
+        id: export
+        run: echo channel=${{ env.channel }} >> $GITHUB_OUTPUT
 
-      - name: Select charmhub channel
-        uses: canonical/charming-actions/channel@934193396735701141a1decc3613818e412da606 # 2.6.3
-        id: select-channel
-        if: ${{ inputs.destination_channel == '' }}
+  
+  publish-charm:
+    name: Publish Charm
+    runs-on: ubuntu-24.04
+    needs: check
+    outputs:
+      channel: ${{ steps.parse-inputs.outputs.destination_channel }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          fetch-depth: 0
 
       # Combine inputs from different sources to a single canonical value so later steps don't
       # need logic for picking the right one
@@ -49,9 +72,9 @@ jobs:
         id: parse-inputs
         run: |
           # destination_channel
-          destination_channel="${{ inputs.destination_channel || steps.select-channel.outputs.name }}"
+          destination_channel="${{ inputs.destination_channel || needs.check.outputs.channel }}"
           echo "setting output of destination_channel=$destination_channel"
-          echo "::set-output name=destination_channel::$destination_channel"
+          echo "destination_channel=$destination_channel" >> $GITHUB_OUTPUT
 
       - name: Upload charm to charmhub
         uses: canonical/charming-actions/upload-charm@934193396735701141a1decc3613818e412da606 # 2.6.3
@@ -59,3 +82,70 @@ jobs:
           credentials: ${{ secrets.CHARMCRAFT_CREDENTIALS }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           channel: ${{ steps.parse-inputs.outputs.destination_channel }}
+          destructive-mode: false
+
+  revision:
+    concurrency:
+      group: ${{ inputs.track }}-${{ needs.publish-charm.outputs.channel }}
+      cancel-in-progress: true
+    needs: 
+      - check
+      - publish-charm
+    outputs:
+      revision: ${{ steps.set-revision.outputs.revision }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          fetch-depth: 0
+      - name: Set revision
+        id: set-revision
+        run: |
+          sudo snap install charmcraft --classic --channel latest/stable
+          revision=$(charmcraft status ${{ env.CHARM_NAME }} --format json | jq '.[] | select(.track == "${{ env.TRACK }}") | .mappings[0].releases[] | select(.channel == "${{ needs.publish-charm.outputs.channel }}") | .revision')
+          echo "setting output of revision=$revision"
+          echo "revision=$revision" >> $GITHUB_OUTPUT
+        env:
+          CHARMCRAFT_AUTH: ${{ secrets.CHARMCRAFT_CREDENTIALS }}
+          CHARM_NAME: identity-platform-login-ui
+          # only cater for latest track for now
+          TRACK: latest
+
+  dev-deploy:
+    concurrency:
+      group: ${{ inputs.track }}-${{ needs.publish-charm.outputs.channel }}
+      cancel-in-progress: true
+    needs:
+      - check
+      - publish-charm
+      - revision
+    if: ${{ (needs.publish-charm.outputs.channel == 'latest/edge') }}
+    uses: "./.github/workflows/_deploy.yaml"
+    secrets:
+        CLIENT_ID: ${{ secrets.JIMM_DEV_CLIENT_ID }}
+        CLIENT_SECRET: ${{ secrets.JIMM_DEV_CLIENT_SECRET }}
+        JIMM_URL: ${{ secrets.JIMM_URL }}
+    with:
+        model: dev-iam
+        revision: ${{ needs.revision.outputs.revision }}
+        channel: ${{ needs.publish-charm.outputs.channel}}
+
+  stg-deploy:
+    concurrency:
+      group: ${{ needs.check.outputs.track }}-${{ needs.publish-charm.outputs.channel }}
+      cancel-in-progress: true
+    needs:
+      - check
+      - publish-charm
+      - revision
+    if: ${{ (needs.publish-charm.outputs.channel == 'latest/stable') }}
+    uses: "./.github/workflows/_deploy.yaml"
+    secrets:
+        CLIENT_ID: ${{ secrets.JIMM_STG_CLIENT_ID }}
+        CLIENT_SECRET: ${{ secrets.JIMM_STG_CLIENT_SECRET }}
+        JIMM_URL: ${{ secrets.JIMM_URL }}
+    with:
+        model: stg-iam
+        revision: ${{ needs.revision.outputs.revision }}
+        channel: ${{ needs.publish-charm.outputs.channel}}
