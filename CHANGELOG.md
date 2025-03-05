@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/canonical/identity-platform-login-ui-operator/compare/v1.0.0...v1.0.1) (2025-03-05)
+
+
+### Bug Fixes
+
+* pin dependencies ([570a51a](https://github.com/canonical/identity-platform-login-ui-operator/commit/570a51a059cf6d92cd6d95216448e50f7ad00139))
+
 ## 1.0.0 (2025-03-05)
 
 
