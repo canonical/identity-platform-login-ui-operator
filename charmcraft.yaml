@@ -28,20 +28,26 @@ resources:
 requires:
   ingress:
     interface: ingress
+    optional: true
   kratos-info:
     interface: kratos_info
     limit: 1
+    optional: true
   hydra-endpoint-info:
     interface: hydra_endpoints
     limit: 1
+    optional: true
   logging:
     interface: loki_push_api
     limit: 1
+    optional: true
   tracing:
     interface: tracing
     limit: 1
+    optional: true
   receive-ca-cert:
     interface: certificate_transfer
+    optional: true
     description: |
       Receive a CA cert.
       This relation can be used with a local CA to obtain the CA cert that was used to sign proxied
