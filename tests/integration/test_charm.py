@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import logging
+import os
 from pathlib import Path
 
 import pytest
@@ -30,7 +31,13 @@ async def test_build_and_deploy(ops_test: OpsTest):
 
     Assert on the unit status before any relations/configurations take place.
     """
-    charm = await ops_test.build_charm(".")
+    # in GitHub CI, charms are built with charmcraftcache and uploaded to $CHARM_PATH
+    charm = os.getenv("CHARM_PATH")
+    logger.info(charm)
+    if not charm:
+        # fall back to build locally - required when run outside of GitHub CI
+        charm = await ops_test.build_charm(".")
+
     resources = {"oci-image": METADATA["resources"]["oci-image"]["upstream-source"]}
     await ops_test.model.deploy(
         charm, resources=resources, application_name=APP_NAME, trust=True, series="jammy"
