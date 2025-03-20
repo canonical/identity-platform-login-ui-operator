@@ -1,3 +1,4 @@
+name: On Schedule
 on:
   schedule:
     - cron: '0 8 * * MON'
@@ -5,11 +6,15 @@ on:
 jobs:
   update-charm-libs:
     name: Update Charm Libraries
-    uses: ./.github/workflows/update_libs.yaml
+    uses: canonical/identity-team/.github/workflows/charm-libs-update.yaml@0815f8e87456fd72fdcb68097dae31606ceb01ef # v1.5.0
     secrets:
       CHARMCRAFT_CREDENTIALS: ${{ secrets.CHARMCRAFT_CREDENTIALS }}
       PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
 
   tests:
-    name: Run Tests
-    uses: ./.github/workflows/tests.yaml
+    name: CI
+    uses: canonical/identity-team/.github/workflows/charm-pull-request.yaml@0815f8e87456fd72fdcb68097dae31606ceb01ef # v1.5.0
+#    with:
+#      charm-name: "identity-platform-login-ui-operator"
+#      container-name: "login-ui"
+#      use-charmcraftcache: true
