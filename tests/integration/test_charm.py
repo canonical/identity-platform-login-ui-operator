@@ -33,7 +33,6 @@ async def test_build_and_deploy(ops_test: OpsTest):
     """
     # in GitHub CI, charms are built with charmcraftcache and uploaded to $CHARM_PATH
     charm = os.getenv("CHARM_PATH")
-    logger.info(charm)
     if not charm:
         # fall back to build locally - required when run outside of GitHub CI
         charm = await ops_test.build_charm(".")
