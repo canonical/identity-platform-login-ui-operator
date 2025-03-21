@@ -1,7 +1,7 @@
-pytest-asyncio==0.25.3
-pytest
+-r requirements.txt
 juju
+pydantic<2.0
+pytest
+pytest-asyncio
 pytest-operator==0.41.0
 requests
-pydantic<2.0
--r requirements.txt
