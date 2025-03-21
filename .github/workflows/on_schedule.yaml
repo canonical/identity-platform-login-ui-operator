@@ -13,8 +13,8 @@ jobs:
 
   tests:
     name: CI
-    uses: canonical/identity-team/.github/workflows/charm-pull-request.yaml@0815f8e87456fd72fdcb68097dae31606ceb01ef # v1.5.0
-#    with:
-#      charm-name: "identity-platform-login-ui-operator"
-#      container-name: "login-ui"
-#      use-charmcraftcache: true
+    uses: canonical/identity-team/.github/workflows/charm-pull-request.yaml@v1.6.0
+    with:
+      charm-name: "identity-platform-login-ui-operator"
+      container-name: "login-ui"
+      use-charmcraftcache: true
