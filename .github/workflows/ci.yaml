@@ -14,8 +14,22 @@ on:
      - "*"
 
 jobs:
+  check-changes:
+    name: Check Source File Changes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            only_terraform:
+              - 'terraform/**/*.tf'
+
   tests:
     name: CI
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.only_terraform == 'false' }}
     uses: canonical/identity-team/.github/workflows/charm-pull-request.yaml@81e8eeaa58cf2f549cf229f139e56810d0d84e2c # v1.6.0
     with:
       charm-name: "identity-platform-login-ui-operator"
