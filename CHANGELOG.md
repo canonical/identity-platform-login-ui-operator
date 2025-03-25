@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.0](https://github.com/canonical/identity-platform-login-ui-operator/compare/v1.0.1...v1.1.0) (2025-03-25)
+
+
+### Features
+
+* add terraform module ([e31034e](https://github.com/canonical/identity-platform-login-ui-operator/commit/e31034e3fbb07e864f9333c69f956f77b8f4697b))
+
+
+### Bug Fixes
+
+* fix the integration test dependency ([b1ba728](https://github.com/canonical/identity-platform-login-ui-operator/commit/b1ba728f78edf211a0441550bda05d4524d5a078))
+* provide optional flags in charmcraft.yaml ([b21e60d](https://github.com/canonical/identity-platform-login-ui-operator/commit/b21e60d504f30d6dd75198d975d0710ccb82db2b))
+
 ## [1.0.1](https://github.com/canonical/identity-platform-login-ui-operator/compare/v1.0.0...v1.0.1) (2025-03-05)
 
 
