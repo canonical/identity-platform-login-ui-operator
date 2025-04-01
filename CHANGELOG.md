@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.1](https://github.com/canonical/identity-platform-login-ui-operator/compare/v1.1.0...v1.1.1) (2025-04-01)
+
+
+### Bug Fixes
+
+* address CVEs ([e4d72c7](https://github.com/canonical/identity-platform-login-ui-operator/commit/e4d72c782cd4b3437f974fddc9830eb9c4fc6799)), closes [#231](https://github.com/canonical/identity-platform-login-ui-operator/issues/231)
+* do not error if missing fields ([02f5157](https://github.com/canonical/identity-platform-login-ui-operator/commit/02f51579fec3d74ad13de8209aac37bbcada2aff))
+
 ## [1.1.0](https://github.com/canonical/identity-platform-login-ui-operator/compare/v1.0.1...v1.1.0) (2025-03-25)
 
 
