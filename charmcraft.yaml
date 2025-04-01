@@ -86,3 +86,4 @@ parts:
   charm:
     charm-binary-python-packages:
       - jsonschema
+      - "setuptools>=70.0.0"
