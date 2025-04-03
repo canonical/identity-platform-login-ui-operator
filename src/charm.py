@@ -20,7 +20,7 @@ from charms.hydra.v0.hydra_endpoints import (
 )
 from charms.identity_platform_login_ui_operator.v0.login_ui_endpoints import (
     LoginUIEndpointsProvider,
-    LoginUINonLeaderOperationError,
+    LoginUIProviderData,
 )
 from charms.kratos.v0.kratos_info import KratosInfoRelationDataMissingError, KratosInfoRequirer
 from charms.loki_k8s.v1.loki_push_api import LogForwarder
@@ -275,7 +275,9 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
         if self._kratos_info.is_ready():
             container["environment"]["MFA_ENABLED"] = literal_eval(kratos_info.get("mfa_enabled"))
-            container["environment"]["OIDC_WEBAUTHN_SEQUENCING_ENABLED"] = literal_eval(kratos_info.get("oidc_webauthn_sequencing_enabled"))
+            container["environment"]["OIDC_WEBAUTHN_SEQUENCING_ENABLED"] = literal_eval(
+                kratos_info.get("oidc_webauthn_sequencing_enabled")
+            )
 
         if self._tracing_ready:
             container["environment"]["OTEL_HTTP_ENDPOINT"] = self.tracing.get_endpoint("otlp_http")
@@ -308,11 +310,19 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
     def _update_login_ui_endpoint_relation_data(self, event: RelationEvent) -> None:
         endpoint = self._domain_url or ""
 
-        try:
-            self.endpoints_provider.send_endpoints_relation_data(endpoint)
-            logger.info(f"Sending login ui endpoint info: endpoint - {endpoint}")
-        except LoginUINonLeaderOperationError:
-            logger.info("Non-leader unit can't update relation data")
+        self.endpoints_provider.send_endpoints_relation_data(
+            LoginUIProviderData(
+                consent_url=f"{endpoint}/ui/consent",
+                error_url=f"{endpoint}/ui/error",
+                login_url=f"{endpoint}/ui/login",
+                oidc_error_url=f"{endpoint}/ui/oidc_error",
+                device_verification_url=f"{endpoint}/ui/device_code",
+                post_device_done_url=f"{endpoint}/ui/device_complete",
+                recovery_url=f"{endpoint}/ui/reset_email",
+                settings_url=f"{endpoint}/ui/reset_password",
+                webauthn_settings_url=f"{endpoint}/ui/setup_passkey",
+            )
+        )
 
     def _get_hydra_endpoint_info(self) -> str:
         hydra_url = ""

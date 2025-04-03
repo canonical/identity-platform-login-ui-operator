@@ -248,12 +248,14 @@ def test_layer_env_updated_with_kratos_info(harness: Harness) -> None:
         == harness.get_relation_data(kratos_relation_id, "kratos")["mfa_enabled"]
     )
     assert (
-            str(
-                harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
-                    "OIDC_WEBAUTHN_SEQUENCING_ENABLED"
-                ]
-            )
-            == harness.get_relation_data(kratos_relation_id, "kratos")["oidc_webauthn_sequencing_enabled"]
+        str(
+            harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
+                "OIDC_WEBAUTHN_SEQUENCING_ENABLED"
+            ]
+        )
+        == harness.get_relation_data(kratos_relation_id, "kratos")[
+            "oidc_webauthn_sequencing_enabled"
+        ]
     )
 
 

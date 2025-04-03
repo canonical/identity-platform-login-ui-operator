@@ -1,6 +1,5 @@
 -r requirements.txt
 juju
-pydantic<2.0
 pytest
 pytest-asyncio
 pytest-operator==0.41.0
