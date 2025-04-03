@@ -8,6 +8,7 @@
 import json
 from typing import Tuple
 
+from charms.identity_platform_login_ui_operator.v0.login_ui_endpoints import LoginUIProviderData
 from ops.model import ActiveStatus, WaitingStatus
 from ops.testing import Harness
 from pytest_mock import MockerFixture
@@ -324,7 +325,20 @@ def test_ui_endpoint_info(harness: Harness, mocker: MockerFixture) -> None:
     relation_id = harness.add_relation("ui-endpoint-info", "hydra")
     harness.add_relation_unit(relation_id, "hydra/0")
 
-    mocked_service_patcher.assert_called_with(url.replace("http", "https").replace(":80", ""))
+    url = url.replace("http", "https").replace(":80", "")
+    mocked_service_patcher.assert_called_with(
+        LoginUIProviderData(
+            consent_url=f"{url}/ui/consent",
+            error_url=f"{url}/ui/error",
+            login_url=f"{url}/ui/login",
+            oidc_error_url=f"{url}/ui/oidc_error",
+            device_verification_url=f"{url}/ui/device_code",
+            post_device_done_url=f"{url}/ui/device_complete",
+            recovery_url=f"{url}/ui/reset_email",
+            settings_url=f"{url}/ui/reset_password",
+            webauthn_settings_url=f"{url}/ui/setup_passkey",
+        )
+    )
 
 
 def test_ui_endpoint_info_relation_databag(harness: Harness) -> None:
