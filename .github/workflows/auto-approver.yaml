@@ -10,6 +10,6 @@ on:
 jobs:
   auto-approve:
     name: Auto-approve and merge pull request
-    uses: canonical/identity-team/.github/workflows/pr-auto-approval.yaml@dfa29853f47f32bbe2974ad021d067ae245452f8 # v1.7.5
+    uses: canonical/identity-team/.github/workflows/pr-auto-approval.yaml@5bb665b2e346c38f5f081c85a6282802afe96512 # v1.7.7
     secrets:
       PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
