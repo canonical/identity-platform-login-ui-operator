@@ -19,6 +19,7 @@ def harness(mocked_kubernetes_service_patcher: MagicMock) -> ops.testing.Harness
     harness = ops.testing.Harness(IdentityPlatformLoginUiOperatorCharm)
     harness.set_model_name("testing")
     harness.begin()
+    harness.add_network("10.0.0.10")
     return harness
 
 
