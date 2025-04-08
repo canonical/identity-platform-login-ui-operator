@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.2](https://github.com/canonical/identity-platform-login-ui-operator/compare/v1.1.1...v1.1.2) (2025-04-08)
+
+
+### Bug Fixes
+
+* bump ingress lib ([e764aa1](https://github.com/canonical/identity-platform-login-ui-operator/commit/e764aa13551430fdc385f14bcfbbaed89b3a7b3a))
+* update login_ui_endpoints lib ([d923498](https://github.com/canonical/identity-platform-login-ui-operator/commit/d923498e5ac2deee3fc287dfc74b3f82fac025fe))
+
 ## [1.1.1](https://github.com/canonical/identity-platform-login-ui-operator/compare/v1.1.0...v1.1.1) (2025-04-01)
 
 
