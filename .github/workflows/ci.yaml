@@ -22,6 +22,5 @@ jobs:
     name: CI
     uses: canonical/identity-team/.github/workflows/charm-pull-request.yaml@3bcf7c8d36b4e51e5a65d27041389d7456c17b57 # v1.8.0
     with:
-      charm-name: "identity-platform-login-ui-operator"
       container-name: "login-ui"
       use-charmcraftcache: true
