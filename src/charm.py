@@ -50,7 +50,9 @@ from constants import (
     CERTIFICATE_TRANSFER_NAME,
     COOKIES_KEY,
     PEER,
-    WORKLOAD_CONTAINER_NAME,
+    WORKLOAD_CONTAINER_NAME, TRACING_RELATION_NAME, GRAFANA_RELATION_NAME, LOGGING_RELATION_NAME,
+    PROMETHEUS_RELATION_NAME, KRATOS_RELATION_NAME, HYDRA_RELATION_NAME, WORKLOAD_RUN_COMMAND, APPLICATION_NAME,
+    INGRESS_RELATION_NAME,
 )
 from utils import normalise_url
 
@@ -64,20 +66,20 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         """Initialize Charm."""
         super().__init__(*args)
         self._container = self.unit.get_container(WORKLOAD_CONTAINER_NAME)
-        self._hydra_relation_name = "hydra-endpoint-info"
-        self._kratos_relation_name = "kratos-info"
-        self._prometheus_scrape_relation_name = "metrics-endpoint"
-        self._loki_push_api_relation_name = "logging"
-        self._grafana_dashboard_relation_name = "grafana-dashboard"
-        self._tracing_relation_name = "tracing"
-        self._login_ui_service_command = "/usr/bin/identity-platform-login-ui serve"
+        self._hydra_relation_name = HYDRA_RELATION_NAME
+        self._kratos_relation_name = KRATOS_RELATION_NAME
+        self._prometheus_scrape_relation_name = PROMETHEUS_RELATION_NAME
+        self._loki_push_api_relation_name = LOGGING_RELATION_NAME
+        self._grafana_dashboard_relation_name = GRAFANA_RELATION_NAME
+        self._tracing_relation_name = TRACING_RELATION_NAME
+        self._login_ui_service_command = WORKLOAD_RUN_COMMAND
 
         self.service_patcher = KubernetesServicePatch(
-            self, [("identity-platform-login-ui", APPLICATION_PORT)]
+            self, [(APPLICATION_NAME, APPLICATION_PORT)]
         )
         self.ingress = IngressPerAppRequirer(
             self,
-            relation_name="ingress",
+            relation_name=INGRESS_RELATION_NAME,
             port=APPLICATION_PORT,
             strip_prefix=True,
             redirect_https=False,
@@ -145,7 +147,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self.framework.observe(self.ingress.on.revoked, self._on_ingress_revoked)
 
     def _get_version(self) -> Optional[str]:
-        cmd = ["identity-platform-login-ui", "version"]
+        cmd = [APPLICATION_NAME, "version"]
         try:
             process = self._container.exec(cmd)
             stdout, _ = process.wait_output()
