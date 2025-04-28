@@ -66,11 +66,10 @@ The image used by this charm is hosted
 on [GitHub container registry](ghcr.io/canonical/identity-platform-login-ui) and
 maintained by Canonical Identity Team.
 
-### Security
+## Security
 
-Security issues in IAM stack can be reported
-through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File).
-Please do not file GitHub issues about security issues.
+Please see [SECURITY.md](https://github.com/canonical/identity-platform-login-ui-operator/blob/main/SECURITY.md)
+for guidelines on reporting security issues.
 
 ## Contributing
 
