@@ -13,6 +13,8 @@ from ops.model import ActiveStatus, WaitingStatus
 from ops.testing import Harness
 from pytest_mock import MockerFixture
 
+from constants import WORKLOAD_RUN_COMMAND
+
 CONTAINER_NAME = "login-ui"
 TEST_PORT = "8080"
 
@@ -170,7 +172,7 @@ def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
             CONTAINER_NAME: {
                 "override": "replace",
                 "summary": "identity platform login ui",
-                "command": harness.charm._login_ui_service_command,
+                "command": WORKLOAD_RUN_COMMAND,
                 "startup": "enabled",
                 "environment": {
                     "HYDRA_ADMIN_URL": "",
