@@ -52,6 +52,7 @@ async def test_ingress_relation(ops_test: OpsTest):
         application_name=TRAEFIK_PUBLIC_APP,
         channel="latest/edge",
         config={"external_hostname": "some_hostname"},
+        trust=True,
     )
 
     await ops_test.model.add_relation(f"{APP_NAME}:ingress", TRAEFIK_PUBLIC_APP)
