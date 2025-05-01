@@ -2,9 +2,8 @@
 # See LICENSE file for licensing details.
 
 import re
-from typing import cast
 
-from ops import Container, ModelError, Unit
+from ops import Container, Unit
 from ops.pebble import Error, Layer, LayerDict
 
 from constants import (
@@ -45,18 +44,6 @@ class WorkloadService:
     def set_version(self) -> None:
         if version := self.version:
             self._unit.set_workload_version(version)
-
-    @property
-    def is_running(self) -> bool:
-        try:
-            workload_service = self._container.get_service(WORKLOAD_CONTAINER_NAME)
-        except ModelError:
-            return False
-
-        return workload_service.is_running()
-
-    def open_port(self) -> None:
-        self._unit.open_port(protocol="tcp", port=APPLICATION_PORT)
 
 
 class PebbleService:
@@ -107,20 +94,17 @@ class PebbleService:
             container["environment"]["TRACING_ENABLED"] = True
 
         # Define Pebble layer configuration
-        pebble_layer = cast(
-            LayerDict,
-            {
-                "summary": "login_ui layer",
-                "description": "pebble config layer for identity platform login ui",
-                "services": {WORKLOAD_CONTAINER_NAME: container},
-                "checks": {
-                    "login-ui-alive": {
-                        "override": "replace",
-                        "http": {"url": f"http://localhost:{APPLICATION_PORT}/api/v0/status"},
-                    },
+        pebble_layer: LayerDict = {
+            "summary": "login_ui layer",
+            "description": "pebble config layer for identity platform login ui",
+            "services": {WORKLOAD_CONTAINER_NAME: container},
+            "checks": {
+                "login-ui-alive": {
+                    "override": "replace",
+                    "http": {"url": f"http://localhost:{APPLICATION_PORT}/api/v0/status"},
                 },
             },
-        )
+        }
 
         return Layer(pebble_layer)
 

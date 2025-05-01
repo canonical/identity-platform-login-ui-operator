@@ -3,7 +3,6 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Mapping, TypeAlias, Union
 from urllib.parse import urlparse
 
 from charms.hydra.v0.hydra_endpoints import (
@@ -13,28 +12,8 @@ from charms.hydra.v0.hydra_endpoints import (
 )
 from charms.kratos.v0.kratos_info import KratosInfoRelationDataMissingError, KratosInfoRequirer
 from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
-from charms.traefik_k8s.v2.ingress import IngressPerAppRequirer
-from httpcore import URL
-
-from config import ServiceConfigs
-
-EnvVars: TypeAlias = Mapping[str, Union[str, bool]]
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True, slots=True)
-class PublicIngressData:
-    """The data source from the public-ingress integration."""
-
-    url: URL = URL()
-
-    def to_service_configs(self) -> ServiceConfigs:
-        return {"public_url": str(self.url)}
-
-    @classmethod
-    def load(cls, requirer: IngressPerAppRequirer) -> "PublicIngressData":
-        return cls(url=URL(requirer.url)) if requirer.is_ready() else cls()  # type: ignore[arg-type]
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,18 +73,6 @@ class TracingData:
     is_ready: bool = False
     http_endpoint: str = ""
     grpc_endpoint: str = ""
-
-    def to_env_vars(self) -> EnvVars:
-        if not self.is_ready:
-            return {}
-
-        return {
-            "TRACING_ENABLED": True,
-            "TRACING_PROVIDER": "otel",
-            "TRACING_PROVIDERS_OTLP_SERVER_URL": self.http_endpoint,
-            "TRACING_PROVIDERS_OTLP_INSECURE": "true",
-            "TRACING_PROVIDERS_OTLP_SAMPLING_SAMPLING_RATIO": "1.0",
-        }
 
     @classmethod
     def load(cls, requirer: TracingEndpointRequirer) -> "TracingData":

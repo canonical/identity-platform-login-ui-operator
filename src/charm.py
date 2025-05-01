@@ -20,7 +20,6 @@ from charms.identity_platform_login_ui_operator.v0.login_ui_endpoints import (
 )
 from charms.kratos.v0.kratos_info import KratosInfoRequirer
 from charms.loki_k8s.v1.loki_push_api import LogForwarder
-from charms.observability_libs.v0.kubernetes_service_patch import KubernetesServicePatch
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
 from charms.traefik_k8s.v2.ingress import (
@@ -28,33 +27,34 @@ from charms.traefik_k8s.v2.ingress import (
     IngressPerAppRequirer,
     IngressPerAppRevokedEvent,
 )
-from ops.charm import (
+from ops import (
+    ActiveStatus,
+    BlockedStatus,
     CharmBase,
     ConfigChangedEvent,
     HookEvent,
-    InstallEvent,
+    MaintenanceStatus,
+    Relation,
     RelationEvent,
+    WaitingStatus,
     WorkloadEvent,
+    main,
 )
-from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, Relation, WaitingStatus
 from ops.pebble import Layer
 
 from certificate_transfer_integration import CertTransfer
-from config import CharmConfig
 from constants import (
-    APPLICATION_NAME,
     APPLICATION_PORT,
     CERTIFICATE_TRANSFER_NAME,
     COOKIES_KEY,
-    GRAFANA_RELATION_NAME,
-    HYDRA_RELATION_NAME,
-    INGRESS_RELATION_NAME,
-    KRATOS_RELATION_NAME,
-    LOGGING_RELATION_NAME,
+    GRAFANA_INTEGRATION_NAME,
+    HYDRA_INTEGRATION_NAME,
+    INGRESS_INTEGRATION_NAME,
+    KRATOS_INTEGRATION_NAME,
+    LOGGING_INTEGRATION_NAME,
     PEER,
-    PROMETHEUS_RELATION_NAME,
-    TRACING_RELATION_NAME,
+    PROMETHEUS_INTEGRATION_NAME,
+    TRACING_INTEGRATION_NAME,
     WORKLOAD_CONTAINER_NAME,
 )
 from exceptions import PebbleServiceError
@@ -71,37 +71,34 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
     def __init__(self, *args):
         """Initialize Charm."""
         super().__init__(*args)
-        self.charm_config = CharmConfig(self.config)
 
         self._workload_service = WorkloadService(self.unit)
         self._pebble_service = PebbleService(self.unit)
 
-        self.service_patcher = KubernetesServicePatch(self, [(APPLICATION_NAME, APPLICATION_PORT)])
-
         # Ingress
         self.ingress = IngressPerAppRequirer(
             self,
-            relation_name=INGRESS_RELATION_NAME,
+            relation_name=INGRESS_INTEGRATION_NAME,
             port=APPLICATION_PORT,
             strip_prefix=True,
             redirect_https=False,
         )
 
         # Kratos
-        self._kratos_info = KratosInfoRequirer(self, relation_name=KRATOS_RELATION_NAME)
+        self._kratos_info = KratosInfoRequirer(self, relation_name=KRATOS_INTEGRATION_NAME)
         # Hydra
-        self.hydra_endpoints = HydraEndpointsRequirer(self, relation_name=HYDRA_RELATION_NAME)
+        self.hydra_endpoints = HydraEndpointsRequirer(self, relation_name=HYDRA_INTEGRATION_NAME)
         # Login UI
         self.endpoints_provider = LoginUIEndpointsProvider(self)
 
         # Tracing
         self.tracing = TracingEndpointRequirer(
-            self, relation_name=TRACING_RELATION_NAME, protocols=["otlp_http", "otlp_grpc"]
+            self, relation_name=TRACING_INTEGRATION_NAME, protocols=["otlp_http", "otlp_grpc"]
         )
 
         self.metrics_endpoint = MetricsEndpointProvider(
             self,
-            relation_name=PROMETHEUS_RELATION_NAME,
+            relation_name=PROMETHEUS_INTEGRATION_NAME,
             jobs=[
                 {
                     "metrics_path": "/api/v0/metrics",
@@ -111,37 +108,36 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         )
 
         # Loki
-        self._log_forwarder = LogForwarder(self, relation_name=LOGGING_RELATION_NAME)
+        self._log_forwarder = LogForwarder(self, relation_name=LOGGING_INTEGRATION_NAME)
 
         # Grafana
         self._grafana_dashboards = GrafanaDashboardProvider(
-            self, relation_name=GRAFANA_RELATION_NAME
+            self, relation_name=GRAFANA_INTEGRATION_NAME
         )
 
         # Certificate transfer
         self.cert_transfer = CertTransfer(
             self,
             WORKLOAD_CONTAINER_NAME,
-            self._update_pebble_layer,
+            self._holistic_handler,
             CERTIFICATE_TRANSFER_NAME,
         )
 
         self.framework.observe(self.on.login_ui_pebble_ready, self._on_login_ui_pebble_ready)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
-        self.framework.observe(self.on.install, self._on_install)
 
         self.framework.observe(
-            self.on[KRATOS_RELATION_NAME].relation_changed, self._update_pebble_layer
+            self.on[KRATOS_INTEGRATION_NAME].relation_changed, self._holistic_handler
         )
         self.framework.observe(
             self.endpoints_provider.on.ready, self._update_login_ui_endpoint_relation_data
         )
         self.framework.observe(
-            self.on[HYDRA_RELATION_NAME].relation_changed, self._update_pebble_layer
+            self.on[HYDRA_INTEGRATION_NAME].relation_changed, self._holistic_handler
         )
 
-        self.framework.observe(self.tracing.on.endpoint_changed, self._update_pebble_layer)
-        self.framework.observe(self.tracing.on.endpoint_removed, self._update_pebble_layer)
+        self.framework.observe(self.tracing.on.endpoint_changed, self._holistic_handler)
+        self.framework.observe(self.tracing.on.endpoint_removed, self._holistic_handler)
 
         self.framework.observe(self.ingress.on.ready, self._on_ingress_ready)
         self.framework.observe(self.ingress.on.revoked, self._on_ingress_revoked)
@@ -155,20 +151,13 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             return
 
         self._workload_service.set_version()
-        self._update_pebble_layer(event)
-
-    def _on_install(self, event: InstallEvent) -> None:
-        if not self._pebble_service.can_connect():
-            event.defer()
-            logger.info("Cannot connect to Login_UI container. Deferring the event.")
-            self.unit.status = WaitingStatus("Waiting to connect to Login_UI container")
-            return
+        self._holistic_handler(event)
 
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:
         """Handle changed configuration."""
-        self._update_pebble_layer(event)
+        self._holistic_handler(event)
 
-    def _update_pebble_layer(self, event: HookEvent) -> None:
+    def _holistic_handler(self, event: HookEvent) -> None:
         if not self._pebble_service.can_connect():
             event.defer()
             logger.info("Cannot connect to Login_UI container. Deferring the event.")
@@ -200,13 +189,13 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
     def _on_ingress_ready(self, event: IngressPerAppReadyEvent) -> None:
         if self.unit.is_leader():
             logger.info("This app's public ingress URL: %s", event.url)
-        self._update_pebble_layer(event)
+        self._holistic_handler(event)
         self._update_login_ui_endpoint_relation_data(event)
 
     def _on_ingress_revoked(self, event: IngressPerAppRevokedEvent) -> None:
         if self.unit.is_leader():
             logger.info("This app no longer has ingress")
-        self._update_pebble_layer(event)
+        self._holistic_handler(event)
         self._update_login_ui_endpoint_relation_data(event)
 
     @property
@@ -223,7 +212,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
     @property
     def _log_level(self) -> str:
-        return self.charm_config["log_level"]
+        return self.config.get("log_level")
 
     @property
     def _domain_url(self) -> Optional[str]:
