@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/canonical/identity-platform-login-ui-operator/compare/track/0.3-v1.0.0...track/0.3-v1.0.1) (2025-04-30)
+
+
+### Bug Fixes
+
+* use LogForwarder to send logs ([#166](https://github.com/canonical/identity-platform-login-ui-operator/issues/166)) ([eac864e](https://github.com/canonical/identity-platform-login-ui-operator/commit/eac864e2031f8425f202f61920908a37f96f0323))
+
 ## 1.0.0 (2025-03-05)
 
 
