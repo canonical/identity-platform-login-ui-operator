@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.3](https://github.com/canonical/identity-platform-login-ui-operator/compare/v1.1.2...v1.1.3) (2025-05-09)
+
+
+### Bug Fixes
+
+* add pod resource constraints ([715b9ee](https://github.com/canonical/identity-platform-login-ui-operator/commit/715b9ee1424028882a63173ee1d41ba662349a04))
+* **test:** after refactor ([d969fbd](https://github.com/canonical/identity-platform-login-ui-operator/commit/d969fbd8ab15b0e75d3908a9aff7d3a2758be322))
+
 ## [1.1.2](https://github.com/canonical/identity-platform-login-ui-operator/compare/v1.1.1...v1.1.2) (2025-04-08)
 
 
