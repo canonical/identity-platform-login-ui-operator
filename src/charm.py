@@ -20,6 +20,12 @@ from charms.identity_platform_login_ui_operator.v0.login_ui_endpoints import (
 )
 from charms.kratos.v0.kratos_info import KratosInfoRequirer
 from charms.loki_k8s.v1.loki_push_api import LogForwarder
+from charms.observability_libs.v0.kubernetes_compute_resources_patch import (
+    K8sResourcePatchFailedEvent,
+    KubernetesComputeResourcesPatch,
+    ResourceRequirements,
+    adjust_resource_requirements,
+)
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
 from charms.traefik_k8s.v2.ingress import (
@@ -123,6 +129,12 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             CERTIFICATE_TRANSFER_NAME,
         )
 
+        self.resources_patch = KubernetesComputeResourcesPatch(
+            self,
+            WORKLOAD_CONTAINER_NAME,
+            resource_reqs_func=self._resource_reqs_from_config,
+        )
+
         self.framework.observe(self.on.login_ui_pebble_ready, self._on_login_ui_pebble_ready)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
 
@@ -141,6 +153,11 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
         self.framework.observe(self.ingress.on.ready, self._on_ingress_ready)
         self.framework.observe(self.ingress.on.revoked, self._on_ingress_revoked)
+
+        # resource patching
+        self.framework.observe(
+            self.resources_patch.on.patch_failed, self._on_resource_patch_failed
+        )
 
     def _on_login_ui_pebble_ready(self, event: WorkloadEvent) -> None:
         """Define and start a workload using the Pebble API."""
@@ -198,6 +215,10 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self._holistic_handler(event)
         self._update_login_ui_endpoint_relation_data(event)
 
+    def _on_resource_patch_failed(self, event: K8sResourcePatchFailedEvent) -> None:
+        logger.error(f"Failed to patch resource constraints: {event.message}")
+        self.unit.status = BlockedStatus(event.message)
+
     @property
     def _peers(self) -> Optional[Relation]:
         """Fetch the peer relation."""
@@ -228,6 +249,11 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             KratosInfoData.load(self._kratos_info),
             TracingData.load(self.tracing),
         )
+
+    def _resource_reqs_from_config(self) -> ResourceRequirements:
+        limits = {"cpu": self.model.config.get("cpu"), "memory": self.model.config.get("memory")}
+        requests = {"cpu": "100m", "mem": "200Mi"}
+        return adjust_resource_requirements(limits, requests, adhere_to_requests=True)
 
     def _update_login_ui_endpoint_relation_data(self, _: RelationEvent) -> None:
         endpoint = self._domain_url or ""
