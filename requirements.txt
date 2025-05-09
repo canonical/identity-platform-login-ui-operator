@@ -4,3 +4,4 @@ lightkube
 lightkube-models
 jsonschema
 pydantic~=2.11.2
+tenacity~=9.1.2

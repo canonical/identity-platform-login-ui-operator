@@ -8,12 +8,27 @@ from unittest.mock import mock_open, patch
 import ops.testing
 import pytest
 from ops.testing import Harness
+from pytest_mock import MockerFixture
 
 from charm import IdentityPlatformLoginUiOperatorCharm
 
 
+@pytest.fixture(autouse=True)
+def mocked_k8s_resource_patch(mocker: MockerFixture) -> None:
+    mocker.patch(
+        "charms.observability_libs.v0.kubernetes_compute_resources_patch.ResourcePatcher",
+        autospec=True,
+    )
+    mocker.patch.multiple(
+        "charm.KubernetesComputeResourcesPatch",
+        _namespace="testing",
+        _patch=lambda *a, **kw: True,
+        is_ready=lambda *a, **kw: True,
+    )
+
+
 @pytest.fixture()
-def harness() -> ops.testing.Harness:
+def harness(mocked_k8s_resource_patch: None) -> ops.testing.Harness:
     """Initialize harness with Charm."""
     harness = ops.testing.Harness(IdentityPlatformLoginUiOperatorCharm)
     harness.set_model_name("testing")
