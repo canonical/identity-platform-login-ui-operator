@@ -137,6 +137,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
         self.framework.observe(self.on.login_ui_pebble_ready, self._on_login_ui_pebble_ready)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.on.update_status, self._holistic_handler)
 
         self.framework.observe(
             self.on[KRATOS_INTEGRATION_NAME].relation_changed, self._holistic_handler
