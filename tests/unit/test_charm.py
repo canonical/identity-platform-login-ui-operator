@@ -173,7 +173,7 @@ def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
                 "override": "replace",
                 "summary": "identity platform login ui",
                 "command": WORKLOAD_RUN_COMMAND,
-                "startup": "enabled",
+                "startup": "disabled",
                 "environment": {
                     "HYDRA_ADMIN_URL": "",
                     "KRATOS_PUBLIC_URL": "",
