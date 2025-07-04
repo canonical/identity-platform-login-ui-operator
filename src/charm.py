@@ -137,6 +137,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
         self.framework.observe(self.on.login_ui_pebble_ready, self._on_login_ui_pebble_ready)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.on.update_status, self._holistic_handler)
 
         self.framework.observe(
             self.on[KRATOS_INTEGRATION_NAME].relation_changed, self._holistic_handler
@@ -161,6 +162,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
     def _on_login_ui_pebble_ready(self, event: WorkloadEvent) -> None:
         """Define and start a workload using the Pebble API."""
+        self.unit.status = MaintenanceStatus("Configuring resources")
         # Necessary directory for log forwarding
         if not self._pebble_service.can_connect():
             event.defer()
@@ -172,6 +174,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:
         """Handle changed configuration."""
+        self.unit.status = MaintenanceStatus("Configuring resources")
         self._holistic_handler(event)
 
     def _holistic_handler(self, event: HookEvent) -> None:
@@ -190,7 +193,6 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         if not self._cookie_encryption_key:
             self._peers.data[self.app][COOKIES_KEY] = secrets.token_hex(16)
 
-        self.unit.status = MaintenanceStatus("Configuration in progress")
         self.cert_transfer.push_ca_certs()
 
         logger.info("Pebble plan updated with new configuration, replanning")
@@ -204,12 +206,14 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self.unit.status = ActiveStatus()
 
     def _on_ingress_ready(self, event: IngressPerAppReadyEvent) -> None:
+        self.unit.status = MaintenanceStatus("Configuring resources")
         if self.unit.is_leader():
             logger.info("This app's public ingress URL: %s", event.url)
         self._holistic_handler(event)
         self._update_login_ui_endpoint_relation_data(event)
 
     def _on_ingress_revoked(self, event: IngressPerAppRevokedEvent) -> None:
+        self.unit.status = MaintenanceStatus("Configuring resources")
         if self.unit.is_leader():
             logger.info("This app no longer has ingress")
         self._holistic_handler(event)
