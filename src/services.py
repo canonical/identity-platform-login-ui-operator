@@ -51,6 +51,14 @@ class PebbleService:
         self._unit: Unit = unit
         self._container: Container = unit.get_container(WORKLOAD_CONTAINER_NAME)
 
+    def _restart_service(self, restart: bool = False) -> None:
+        if restart:
+            self._container.restart(WORKLOAD_CONTAINER_NAME)
+        elif not self._container.get_service(WORKLOAD_CONTAINER_NAME).is_running():
+            self._container.start(WORKLOAD_CONTAINER_NAME)
+        else:
+            self._container.replan()
+
     def can_connect(self) -> bool:
         return self._container.can_connect()
 
@@ -67,7 +75,7 @@ class PebbleService:
             "override": "replace",
             "summary": "identity platform login ui",
             "command": WORKLOAD_RUN_COMMAND,
-            "startup": "enabled",
+            "startup": "disabled",
             "environment": {
                 "HYDRA_ADMIN_URL": hydra_endpoint.admin_endpoint,
                 "KRATOS_PUBLIC_URL": kratos_info.public_endpoint,
@@ -112,6 +120,6 @@ class PebbleService:
         self._container.add_layer(WORKLOAD_CONTAINER_NAME, layer, combine=True)
 
         try:
-            self._container.restart(WORKLOAD_CONTAINER_NAME)
+            self._restart_service()
         except Exception as e:
             raise PebbleServiceError(f"Pebble failed to restart the workload service. Error: {e}")
