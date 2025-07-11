@@ -10,21 +10,17 @@ links:
   documentation: https://discourse.charmhub.io/t/identity-platform-login-ui-docs-index/12169
   source: https://github.com/canonical/identity-platform-login-ui-operator
   issues: https://github.com/canonical/identity-platform-login-ui-operator/issues
-
 assumes:
   - k8s-api
-
 containers:
   login-ui:
     resource: oci-image
-
 # This field populates the Resources tab on Charmhub.
 resources:
   oci-image:
     type: oci-image
     description: OCI image for login-ui
-    upstream-source: ghcr.io/canonical/identity-platform-login-ui:v0.20.0
-
+    upstream-source: ghcr.io/canonical/identity-platform-login-ui:v0.21.2
 requires:
   ingress:
     interface: ingress
@@ -52,7 +48,6 @@ requires:
       Receive a CA cert.
       This relation can be used with a local CA to obtain the CA cert that was used to sign proxied
       endpoints.
-
 provides:
   ui-endpoint-info:
     interface: login_ui_endpoints
@@ -69,11 +64,9 @@ provides:
       Forwards the built-in grafana dashboard(s) for monitoring identity-platform-login-ui-operator.
     interface: grafana_dashboard
     optional: true
-
 peers:
   identity-platform-login-ui:
     interface: identity_platform_login_ui_peers
-
 config:
   options:
     log_level:
@@ -95,10 +88,8 @@ config:
         automatically deduced from it).
         See https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
       type: string
-
 platforms:
   ubuntu@22.04:amd64:
-
 parts:
   charm:
     charm-binary-python-packages:
