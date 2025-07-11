@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.1.5](https://github.com/canonical/identity-platform-login-ui-operator/compare/v1.1.4...v1.1.5) (2025-07-11)
+
+
+### Bug Fixes
+
+* run holistic handler on update_status ([0e4dda5](https://github.com/canonical/identity-platform-login-ui-operator/commit/0e4dda525f0e54b46761ea137deb70feb963c1a0))
+* update OCI-image resource ([162e8b6](https://github.com/canonical/identity-platform-login-ui-operator/commit/162e8b6e69696f1ceb6b0d0908a2ef68682f1be5))
+* update oci-image to ghcr.io/canonical/identity-platform-login-ui:v0.21.2 ([83b9f19](https://github.com/canonical/identity-platform-login-ui-operator/commit/83b9f196078933c92b05ffc650f6fe9f75cc2469))
+* use replan to restart the service ([c7286b8](https://github.com/canonical/identity-platform-login-ui-operator/commit/c7286b8a164eb304dc4a317367d431e7c13006ca))
+
 ## [1.1.4](https://github.com/canonical/identity-platform-login-ui-operator/compare/v1.1.3...v1.1.4) (2025-05-09)
 
 
