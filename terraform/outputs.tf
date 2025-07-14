@@ -3,7 +3,7 @@
 
 output "app_name" {
   description = "The Juju application name"
-  value       = juju_application.login_ui.name
+  value       = juju_application.application.name
 }
 
 output "requires" {

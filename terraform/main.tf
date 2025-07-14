@@ -5,7 +5,7 @@
  * identity-platform-login-ui charm using the Juju Terraform provider.
  */
 
-resource "juju_application" "login_ui" {
+resource "juju_application" "application" {
   name        = var.app_name
   model       = var.model_name
   trust       = true
