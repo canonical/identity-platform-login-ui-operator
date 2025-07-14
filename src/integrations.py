@@ -11,7 +11,7 @@ from charms.hydra.v0.hydra_endpoints import (
     HydraEndpointsRequirer,
 )
 from charms.kratos.v0.kratos_info import KratosInfoRelationDataMissingError, KratosInfoRequirer
-from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
+from charms.tempo_coordinator_k8s.v0.tracing import TracingEndpointRequirer
 
 logger = logging.getLogger(__name__)
 
