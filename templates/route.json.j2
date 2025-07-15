@@ -1,0 +1,68 @@
+{% set identifier = "{}-{}".format(model, app) %}
+{% set public_svc = "http://{}.{}.svc.cluster.local:{}".format(app, model, public_port) %}
+
+{
+  "http": {
+    "middlewares": {
+      "juju-sidecar-replace-path-regex-{{ identifier }}": {
+        "replacePathRegex": {
+          "regex": "^/(self-service.*)",
+          "replacement": "/api/kratos/$1"
+        }
+      }
+    },
+    "routers": {
+      "juju-{{ identifier }}-public-api-router-self-service": {
+        "entryPoints": ["web"],
+        "rule": "PathPrefix(`/self-service`)",
+        "middlewares": ["juju-sidecar-replace-path-regex-{{ identifier }}"],
+        "service": "juju-{{ identifier }}-public-api-service"
+      },
+      "juju-{{ identifier }}-public-api-router-self-service-tls": {
+        "entryPoints": ["websecure"],
+        "rule": "PathPrefix(`/self-service`)",
+        "middlewares": ["juju-sidecar-replace-path-regex-{{ identifier }}"],
+        "service": "juju-{{ identifier }}-public-api-service",
+        "tls": {
+          "domains": [
+            {
+              "main": "{{ external_host }}",
+              "sans": ["*.{{ external_host }}"]
+
+            }
+          ]
+        }
+      },
+      "juju-{{ identifier }}-public-api-router-ui": {
+        "entryPoints": ["web"],
+        "rule": "PathPrefix(`/ui`)",
+        "service": "juju-{{ identifier }}-public-api-service"
+      },
+      "juju-{{ identifier }}-public-api-router-ui-tls": {
+        "entryPoints": ["websecure"],
+        "rule": "PathPrefix(`/ui`)",
+        "service": "juju-{{ identifier }}-public-api-service",
+        "tls": {
+          "domains": [
+            {
+              "main": "{{ external_host }}",
+              "sans": ["*.{{ external_host }}"]
+
+            }
+          ]
+        }
+      }
+    },
+    "services": {
+      "juju-{{ identifier }}-public-api-service": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "url": "{{ public_svc }}"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

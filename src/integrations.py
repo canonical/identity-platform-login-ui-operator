@@ -1,8 +1,9 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
 from charms.hydra.v0.hydra_endpoints import (
@@ -12,6 +13,11 @@ from charms.hydra.v0.hydra_endpoints import (
 )
 from charms.kratos.v0.kratos_info import KratosInfoRelationDataMissingError, KratosInfoRequirer
 from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
+from charms.traefik_k8s.v0.traefik_route import TraefikRouteRequirer
+from jinja2 import Template
+from yarl import URL
+
+from constants import APPLICATION_PORT as PUBLIC_PORT
 
 logger = logging.getLogger(__name__)
 
@@ -87,3 +93,43 @@ class TracingData:
             http_endpoint=http_endpoint.geturl(),
             grpc_endpoint=grpc_endpoint.geturl(),
         )
+
+@dataclass(frozen=True, slots=True)
+class PublicRouteData:
+    """The data source from the public-route integration."""
+
+    url: URL = URL()
+    config: dict = field(default_factory=dict)
+
+    @classmethod
+    def load(cls, requirer: TraefikRouteRequirer) -> "PublicRouteData":
+        model, app = requirer._charm.model.name, requirer._charm.app.name
+        external_host = requirer.external_host
+        external_endpoint = f"{requirer.scheme}://{external_host}"
+
+        if not external_host:
+            logger.error("External hostname is not set on the ingress provider")
+            return cls()
+
+        # template could have use PathPrefixRegexp but going for a simple one right now
+        with open("templates/route.json.j2", "r") as file:
+            template = Template(file.read())
+
+        ingress_config = json.loads(
+            template.render(
+                model=model,
+                app=app,
+                public_port=PUBLIC_PORT,
+                external_host=external_host,
+            )
+        )
+
+        return cls(
+            url=URL(external_endpoint),
+            config=ingress_config,
+        )
+
+    @property
+    def secured(self) -> bool:
+        return self.url.scheme == "https"
+
