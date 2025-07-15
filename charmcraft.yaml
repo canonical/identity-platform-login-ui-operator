@@ -22,9 +22,6 @@ resources:
     description: OCI image for login-ui
     upstream-source: ghcr.io/canonical/identity-platform-login-ui:v0.23.0
 requires:
-  ingress:
-    interface: ingress
-    optional: true
   kratos-info:
     interface: kratos_info
     limit: 1
@@ -48,6 +45,11 @@ requires:
       Receive a CA cert.
       This relation can be used with a local CA to obtain the CA cert that was used to sign proxied
       endpoints.
+  public-route:
+    interface: traefik_route
+    optional: true
+    description: |
+      Recommended way to expose the charm to the public internet
 provides:
   ui-endpoint-info:
     interface: login_ui_endpoints
