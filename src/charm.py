@@ -28,11 +28,7 @@ from charms.observability_libs.v0.kubernetes_compute_resources_patch import (
 )
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
-from charms.traefik_k8s.v2.ingress import (
-    IngressPerAppReadyEvent,
-    IngressPerAppRequirer,
-    IngressPerAppRevokedEvent,
-)
+from charms.traefik_k8s.v0.traefik_route import TraefikRouteRequirer
 from ops import (
     ActiveStatus,
     BlockedStatus,
@@ -41,6 +37,7 @@ from ops import (
     HookEvent,
     MaintenanceStatus,
     Relation,
+    RelationBrokenEvent,
     RelationEvent,
     WaitingStatus,
     WorkloadEvent,
@@ -55,16 +52,16 @@ from constants import (
     COOKIES_KEY,
     GRAFANA_INTEGRATION_NAME,
     HYDRA_INTEGRATION_NAME,
-    INGRESS_INTEGRATION_NAME,
     KRATOS_INTEGRATION_NAME,
     LOGGING_INTEGRATION_NAME,
     PEER,
     PROMETHEUS_INTEGRATION_NAME,
+    PUBLIC_ROUTE_INTEGRATION_NAME,
     TRACING_INTEGRATION_NAME,
     WORKLOAD_CONTAINER_NAME,
 )
 from exceptions import PebbleServiceError
-from integrations import HydraEndpointData, KratosInfoData, TracingData
+from integrations import HydraEndpointData, KratosInfoData, PublicRouteData, TracingData
 from services import PebbleService, WorkloadService
 from utils import normalise_url
 
@@ -81,13 +78,12 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self._workload_service = WorkloadService(self.unit)
         self._pebble_service = PebbleService(self.unit)
 
-        # Ingress
-        self.ingress = IngressPerAppRequirer(
+        # public route via raw traefik routing configuration
+        self.public_route = TraefikRouteRequirer(
             self,
-            relation_name=INGRESS_INTEGRATION_NAME,
-            port=APPLICATION_PORT,
-            strip_prefix=True,
-            redirect_https=False,
+            self.model.get_relation(PUBLIC_ROUTE_INTEGRATION_NAME),
+            PUBLIC_ROUTE_INTEGRATION_NAME,
+            raw=True,
         )
 
         # Kratos
@@ -152,8 +148,19 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self.framework.observe(self.tracing.on.endpoint_changed, self._holistic_handler)
         self.framework.observe(self.tracing.on.endpoint_removed, self._holistic_handler)
 
-        self.framework.observe(self.ingress.on.ready, self._on_ingress_ready)
-        self.framework.observe(self.ingress.on.revoked, self._on_ingress_revoked)
+        # public route
+        self.framework.observe(
+            self.on[PUBLIC_ROUTE_INTEGRATION_NAME].relation_joined,
+            self._on_public_route_changed,
+        )
+        self.framework.observe(
+            self.on[PUBLIC_ROUTE_INTEGRATION_NAME].relation_changed,
+            self._on_public_route_changed,
+        )
+        self.framework.observe(
+            self.on[PUBLIC_ROUTE_INTEGRATION_NAME].relation_broken,
+            self._on_public_route_broken,
+        )
 
         # resource patching
         self.framework.observe(
@@ -205,19 +212,29 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
         self.unit.status = ActiveStatus()
 
-    def _on_ingress_ready(self, event: IngressPerAppReadyEvent) -> None:
+    def _on_public_route_changed(self, event: RelationEvent) -> None:
         self.unit.status = MaintenanceStatus("Configuring resources")
+
+        # needed due to how traefik_route lib is handling the event
+        self.public_route._relation = event.relation
+
+        if not self.public_route.is_ready():
+            return
+
         if self.unit.is_leader():
-            logger.info("This app's public ingress URL: %s", event.url)
+            public_route_config = PublicRouteData.load(self.public_route).config
+            self.public_route.submit_to_traefik(public_route_config)
+
         self._holistic_handler(event)
         self._update_login_ui_endpoint_relation_data(event)
 
-    def _on_ingress_revoked(self, event: IngressPerAppRevokedEvent) -> None:
+    def _on_public_route_broken(self, event: RelationBrokenEvent) -> None:
         self.unit.status = MaintenanceStatus("Configuring resources")
-        if self.unit.is_leader():
-            logger.info("This app no longer has ingress")
+
+        # needed due to how traefik_route lib is handling the event
+        self.public_route._relation = event.relation
+
         self._holistic_handler(event)
-        self._update_login_ui_endpoint_relation_data(event)
 
     def _on_resource_patch_failed(self, event: K8sResourcePatchFailedEvent) -> None:
         logger.error(f"Failed to patch resource constraints: {event.message}")
@@ -245,7 +262,11 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
     @property
     def _domain_url(self) -> Optional[str]:
-        return normalise_url(self.ingress.url) if self.ingress.is_ready() else None
+        return (
+            normalise_url(str(PublicRouteData.load(self.public_route).url))
+            if self.public_route.is_ready()
+            else None
+        )
 
     @property
     def _login_ui_layer(self) -> Layer:
