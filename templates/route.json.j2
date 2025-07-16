@@ -6,8 +6,8 @@
     "middlewares": {
       "juju-sidecar-replace-path-regex-{{ identifier }}": {
         "replacePathRegex": {
-          "regex": "^/(self-service.*)",
-          "replacement": "/api/kratos/$1"
+          "regex": "^/self-service/(.*)",
+          "replacement": "/api/kratos/self-service/$1"
         }
       }
     },

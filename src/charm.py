@@ -90,6 +90,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             self,
             self.model.get_relation(PUBLIC_ROUTE_INTEGRATION_NAME),
             PUBLIC_ROUTE_INTEGRATION_NAME,
+            raw=True,
         )
 
         # Kratos
