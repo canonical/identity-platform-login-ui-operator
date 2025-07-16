@@ -33,6 +33,44 @@
           ]
         }
       },
+      "juju-{{ identifier }}-public-api-router-api-device": {
+        "entryPoints": ["web"],
+        "rule": "Path(`/api/device`)",
+        "service": "juju-{{ identifier }}-public-api-service"
+      },
+      "juju-{{ identifier }}-public-api-router-api-device-tls": {
+        "entryPoints": ["websecure"],
+        "rule": "Path(`/api/device`)",
+        "service": "juju-{{ identifier }}-public-api-service",
+        "tls": {
+          "domains": [
+            {
+              "main": "{{ external_host }}",
+              "sans": ["*.{{ external_host }}"]
+
+            }
+          ]
+        }
+      },
+      "juju-{{ identifier }}-public-api-router-api-consent": {
+        "entryPoints": ["web"],
+        "rule": "Path(`/api/consent`)",
+        "service": "juju-{{ identifier }}-public-api-service"
+      },
+      "juju-{{ identifier }}-public-api-router-api-consent-tls": {
+        "entryPoints": ["websecure"],
+        "rule": "Path(`/api/consent`)",
+        "service": "juju-{{ identifier }}-public-api-service",
+        "tls": {
+          "domains": [
+            {
+              "main": "{{ external_host }}",
+              "sans": ["*.{{ external_host }}"]
+
+            }
+          ]
+        }
+      },            
       "juju-{{ identifier }}-public-api-router-ui": {
         "entryPoints": ["web"],
         "rule": "PathPrefix(`/ui`)",
