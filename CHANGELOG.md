@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.0](https://github.com/canonical/identity-platform-login-ui-operator/compare/v1.1.5...v1.2.0) (2025-07-17)
+
+
+### Features
+
+* update juju_application resource name ([baa5b1e](https://github.com/canonical/identity-platform-login-ui-operator/commit/baa5b1e6c3bb4332bcb3ea2157af535dd3f371d9))
+
+
+### Bug Fixes
+
+* use terraform module in deployment ([ae4c93d](https://github.com/canonical/identity-platform-login-ui-operator/commit/ae4c93d2840923b7a4b740b5461e005074ff06e5))
+
 ## [1.1.5](https://github.com/canonical/identity-platform-login-ui-operator/compare/v1.1.4...v1.1.5) (2025-07-11)
 
 
