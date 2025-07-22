@@ -70,7 +70,26 @@
             }
           ]
         }
-      },            
+      },
+      "juju-{{ identifier }}-public-api-router-api-config": {
+        "entryPoints": ["web"],
+        "rule": "Path(`/api/v0/app-config`)",
+        "service": "juju-{{ identifier }}-public-api-service"
+      },
+      "juju-{{ identifier }}-public-api-router-api-config-tls": {
+        "entryPoints": ["websecure"],
+        "rule": "Path(`/api/v0/app-config`)",
+        "service": "juju-{{ identifier }}-public-api-service",
+        "tls": {
+          "domains": [
+            {
+              "main": "{{ external_host }}",
+              "sans": ["*.{{ external_host }}"]
+
+            }
+          ]
+        }
+      },                     
       "juju-{{ identifier }}-public-api-router-ui": {
         "entryPoints": ["web"],
         "rule": "PathPrefix(`/ui`)",
