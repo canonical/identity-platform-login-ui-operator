@@ -240,6 +240,10 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         return self.config.get("log_level")
 
     @property
+    def _support_email(self) -> str:
+        return self.config.get("support_email")
+
+    @property
     def _domain_url(self) -> Optional[str]:
         return normalise_url(self.ingress.url) if self.ingress.is_ready() else None
 
@@ -249,6 +253,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             self._domain_url,
             self._cookie_encryption_key,
             self._log_level,
+            self._support_email,
             HydraEndpointData.load(self.hydra_endpoints),
             KratosInfoData.load(self._kratos_info),
             TracingData.load(self.tracing),

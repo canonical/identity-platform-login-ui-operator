@@ -67,6 +67,7 @@ class PebbleService:
         domain_url: str,
         cookie_encryption_key: str,
         log_level: str,
+        support_email: str,
         hydra_endpoint: HydraEndpointData,
         kratos_info: KratosInfoData,
         tracing_data: TracingData,
@@ -86,6 +87,7 @@ class PebbleService:
                 "TRACING_ENABLED": False,
                 "AUTHORIZATION_ENABLED": False,
                 "LOG_LEVEL": log_level,
+                "SUPPORT_EMAIL": support_email,
                 "DEBUG": log_level == "DEBUG",
             },
         }

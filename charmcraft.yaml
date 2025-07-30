@@ -88,6 +88,10 @@ config:
         automatically deduced from it).
         See https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
       type: string
+    support_email:
+      description: |
+        The email users can use to contact support
+      type: string
 platforms:
   ubuntu@22.04:amd64:
 parts:

@@ -183,6 +183,7 @@ def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
                     "COOKIES_ENCRYPTION_KEY": harness.charm._cookie_encryption_key,
                     "TRACING_ENABLED": False,
                     "AUTHORIZATION_ENABLED": False,
+                    "SUPPORT_EMAIL": None,
                     "LOG_LEVEL": harness.charm._log_level,
                     "DEBUG": False,
                 },
