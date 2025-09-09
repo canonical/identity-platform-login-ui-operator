@@ -11,6 +11,8 @@ import requests
 import yaml
 from pytest_operator.plugin import OpsTest
 
+from constants import PUBLIC_ROUTE_INTEGRATION_NAME
+
 logger = logging.getLogger(__name__)
 
 METADATA = yaml.safe_load(Path("./charmcraft.yaml").read_text())
@@ -57,11 +59,13 @@ async def test_ingress_relation(ops_test: OpsTest):
         TRAEFIK,
         application_name=TRAEFIK_PUBLIC_APP,
         channel="latest/stable",
-        config={"external_hostname": "some_hostname"},
+        config={"external_hostname": "ingress"},
         trust=True,
     )
 
-    await ops_test.model.add_relation(f"{APP_NAME}:ingress", TRAEFIK_PUBLIC_APP)
+    await ops_test.model.add_relation(
+        f"{APP_NAME}:{PUBLIC_ROUTE_INTEGRATION_NAME}", TRAEFIK_PUBLIC_APP
+    )
 
     await ops_test.model.wait_for_idle(
         apps=[TRAEFIK_PUBLIC_APP],
@@ -75,6 +79,6 @@ async def test_has_ingress(ops_test: OpsTest):
     # Get the traefik address and try to reach identity-platform-login-ui
     public_address = await get_unit_address(ops_test, TRAEFIK_PUBLIC_APP, 0)
 
-    resp = requests.get(f"http://{public_address}/{ops_test.model.name}-{APP_NAME}/ui/login")
+    resp = requests.get(f"http://{public_address}/ui/login")
 
     assert resp.status_code == 200

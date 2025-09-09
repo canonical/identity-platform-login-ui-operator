@@ -13,7 +13,7 @@ from ops.model import ActiveStatus, WaitingStatus
 from ops.testing import Harness
 from pytest_mock import MockerFixture
 
-from constants import WORKLOAD_RUN_COMMAND, PUBLIC_ROUTE_INTEGRATION_NAME
+from constants import PUBLIC_ROUTE_INTEGRATION_NAME, WORKLOAD_RUN_COMMAND
 
 CONTAINER_NAME = "login-ui"
 TEST_PORT = "8080"
@@ -42,7 +42,6 @@ def setup_ingress_relation(harness: Harness) -> Tuple[int, str]:
 
     breakpoint()
     return relation_id, f"{scheme}://{host}"
-
 
 
 def setup_kratos_relation(harness: Harness) -> int:
@@ -317,11 +316,12 @@ def test_layer_updated_with_ingress_ready(harness: Harness) -> None:
     harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
     _, url = setup_ingress_relation(harness)
 
-    assert harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
-        "BASE_URL"
-    ] == url
-
-
+    assert (
+        harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
+            "BASE_URL"
+        ]
+        == url
+    )
 
 
 def test_ui_endpoint_info(harness: Harness, mocker: MockerFixture) -> None:

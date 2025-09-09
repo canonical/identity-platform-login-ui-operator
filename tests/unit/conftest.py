@@ -11,9 +11,7 @@ from ops.testing import Harness
 from pytest_mock import MockerFixture
 
 from charm import IdentityPlatformLoginUiOperatorCharm
-from constants import (
-    PUBLIC_ROUTE_INTEGRATION_NAME,
-)
+
 
 @pytest.fixture(autouse=True)
 def mocked_k8s_resource_patch(mocker: MockerFixture) -> None:
@@ -49,5 +47,7 @@ def mock_get_version(harness: Harness):
 @pytest.fixture(autouse=True)
 def patch_certificate_transfer_integration_file_open():
     breakpoint()
-    with patch("certificate_transfer_integration.open", new_callable=mock_open, read_data="data") as f:
+    with patch(
+        "certificate_transfer_integration.open", new_callable=mock_open, read_data="data"
+    ) as f:
         yield f
