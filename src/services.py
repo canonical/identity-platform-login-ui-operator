@@ -45,6 +45,11 @@ class WorkloadService:
         if version := self.version:
             self._unit.set_workload_version(version)
 
+    def open_port(self) -> None:
+        self._unit.open_port(protocol="tcp", port=APPLICATION_PORT)
+
+
+
 
 class PebbleService:
     def __init__(self, unit):
@@ -65,7 +70,7 @@ class PebbleService:
     def render_pebble_layer(
         self,
         domain_url: str,
-        cookie_encryption_key: str,
+        cookie_encryption_key: str,open_port
         log_level: str,
         support_email: str,
         hydra_endpoint: HydraEndpointData,
