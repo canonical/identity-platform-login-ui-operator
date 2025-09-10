@@ -177,7 +177,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             return
 
         self._workload_service.open_port()
-        
+
         self._workload_service.set_version()
         self._holistic_handler(event)
 

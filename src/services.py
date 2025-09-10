@@ -49,8 +49,6 @@ class WorkloadService:
         self._unit.open_port(protocol="tcp", port=APPLICATION_PORT)
 
 
-
-
 class PebbleService:
     def __init__(self, unit):
         self._unit: Unit = unit
