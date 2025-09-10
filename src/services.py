@@ -70,7 +70,7 @@ class PebbleService:
     def render_pebble_layer(
         self,
         domain_url: str,
-        cookie_encryption_key: str,open_port
+        cookie_encryption_key: str,
         log_level: str,
         support_email: str,
         hydra_endpoint: HydraEndpointData,
