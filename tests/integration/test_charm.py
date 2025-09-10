@@ -11,6 +11,7 @@ import pytest
 import requests
 from conftest import (
     LOGIN_UI_APP,
+    LOGIN_UI_IMAGE,
     PUBLIC_INGRESS_DOMAIN,
     TRAEFIK_CHARM,
     TRAEFIK_PUBLIC_APP,
@@ -33,6 +34,14 @@ async def test_build_and_deploy(ops_test: OpsTest, local_charm: Path) -> None:
         trust=True,
     )
     # await ops_test.model.integrate(f"{TRAEFIK_PUBLIC_APP}:certificates", f"{CA_APP}:certificates")
+
+    await ops_test.model.deploy(
+        application_name=LOGIN_UI_APP,
+        entity_url=str(local_charm),
+        resources={"oci-image": LOGIN_UI_IMAGE},
+        series="jammy",
+        trust=True,
+    )
 
     # Integrate with dependencies
     await integrate_dependencies(ops_test)
@@ -58,7 +67,8 @@ async def test_ingress_relation(ops_test: OpsTest):
 
 async def test_has_ingress(ops_test: OpsTest, public_address: Callable):
     # Get the traefik address and try to reach identity-platform-login-ui
+    address = await public_address(ops_test)
     breakpoint()
-    resp = requests.get(f"http://{public_address}/ui/login")
+    resp = requests.get(f"http://{address}/ui/login")
 
     assert resp.status_code == 200
