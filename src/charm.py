@@ -176,6 +176,8 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting to connect to Login_UI container")
             return
 
+        self._workload_service.open_port()
+
         self._workload_service.set_version()
         self._holistic_handler(event)
 
