@@ -278,6 +278,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                 recovery_url=f"{endpoint}/ui/reset_email",
                 settings_url=f"{endpoint}/ui/reset_password",
                 webauthn_settings_url=f"{endpoint}/ui/setup_passkey",
+                account_linking_settings_url=f"{endpoint}/ui/manage_connected_accounts",
             )
         )
 
