@@ -340,6 +340,7 @@ def test_ui_endpoint_info(harness: Harness, mocker: MockerFixture) -> None:
             recovery_url=f"{url}/ui/reset_email",
             settings_url=f"{url}/ui/reset_password",
             webauthn_settings_url=f"{url}/ui/setup_passkey",
+            account_linking_settings_url=f"{url}/ui/manage_connected_accounts",
         )
     )
 
@@ -362,6 +363,7 @@ def test_ui_endpoint_info_relation_databag(harness: Harness) -> None:
         "recovery_url": f"{url}/ui/reset_email",
         "settings_url": f"{url}/ui/reset_password",
         "webauthn_settings_url": f"{url}/ui/setup_passkey",
+        "account_linking_settings_url": f"{url}/ui/manage_connected_accounts",
     }
 
     relation_data = harness.get_relation_data(relation_id, harness.model.app.name)
