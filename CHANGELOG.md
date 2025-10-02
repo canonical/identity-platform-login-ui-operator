@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.2.0](https://github.com/canonical/identity-platform-login-ui-operator/compare/v1.1.5...v1.2.0) (2025-10-02)
+
+
+### Features
+
+* update juju_application resource name ([baa5b1e](https://github.com/canonical/identity-platform-login-ui-operator/commit/baa5b1e6c3bb4332bcb3ea2157af535dd3f371d9))
+
+
+### Bug Fixes
+
+* make support email configurable ([6f4260c](https://github.com/canonical/identity-platform-login-ui-operator/commit/6f4260ce9abb918731143c11356466fdf79432de))
+* remove the terraform state file ([20d72ce](https://github.com/canonical/identity-platform-login-ui-operator/commit/20d72ce7612c2bf6fa32b851315f8d33d00b465f))
+* remove the terraform state file ([025e27d](https://github.com/canonical/identity-platform-login-ui-operator/commit/025e27d0ffb1102fa203978f9cd68e2cf8fcddf1))
+* update OCI-image resource ([145c5dc](https://github.com/canonical/identity-platform-login-ui-operator/commit/145c5dc5ef1a18a9ad74e3888a491d58355589ee))
+* update oci-image to ghcr.io/canonical/identity-platform-login-ui:v0.21.3 ([23e5669](https://github.com/canonical/identity-platform-login-ui-operator/commit/23e566930effea9ebf00223eec0d0dd919eac74d))
+* use terraform module in deployment ([ae4c93d](https://github.com/canonical/identity-platform-login-ui-operator/commit/ae4c93d2840923b7a4b740b5461e005074ff06e5))
+
 ## [1.1.5](https://github.com/canonical/identity-platform-login-ui-operator/compare/v1.1.4...v1.1.5) (2025-07-11)
 
 
