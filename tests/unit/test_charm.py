@@ -13,7 +13,7 @@ from ops.model import ActiveStatus, WaitingStatus
 from ops.testing import Harness
 from pytest_mock import MockerFixture
 
-from constants import WORKLOAD_RUN_COMMAND
+from constants import PUBLIC_ROUTE_INTEGRATION_NAME, WORKLOAD_RUN_COMMAND
 
 CONTAINER_NAME = "login-ui"
 TEST_PORT = "8080"
@@ -28,15 +28,20 @@ def setup_peer_relation(harness: Harness) -> Tuple[int, str]:
 def setup_ingress_relation(harness: Harness) -> Tuple[int, str]:
     """Set up ingress relation."""
     harness.set_leader(True)
-    relation_id = harness.add_relation("ingress", "traefik")
+    relation_id = harness.add_relation(PUBLIC_ROUTE_INTEGRATION_NAME, "traefik")
     harness.add_relation_unit(relation_id, "traefik/0")
-    url = f"http://ingress:80/{harness.model.name}-identity-platform-login-ui"
+    scheme, host = "https", "ingress"
     harness.update_relation_data(
         relation_id,
         "traefik",
-        {"ingress": json.dumps({"url": url})},
+        {
+            "external_host": host,
+            "scheme": scheme,
+        },
     )
-    return relation_id, url
+
+    breakpoint()
+    return relation_id, f"{scheme}://{host}"
 
 
 def setup_kratos_relation(harness: Harness) -> int:
@@ -311,9 +316,12 @@ def test_layer_updated_with_ingress_ready(harness: Harness) -> None:
     harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
     _, url = setup_ingress_relation(harness)
 
-    assert harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
-        "BASE_URL"
-    ] == url.replace("http", "https").replace(":80", "")
+    assert (
+        harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
+            "BASE_URL"
+        ]
+        == url
+    )
 
 
 def test_ui_endpoint_info(harness: Harness, mocker: MockerFixture) -> None:
@@ -328,7 +336,6 @@ def test_ui_endpoint_info(harness: Harness, mocker: MockerFixture) -> None:
     relation_id = harness.add_relation("ui-endpoint-info", "hydra")
     harness.add_relation_unit(relation_id, "hydra/0")
 
-    url = url.replace("http", "https").replace(":80", "")
     mocked_service_patcher.assert_called_with(
         LoginUIProviderData(
             consent_url=f"{url}/ui/consent",
@@ -348,7 +355,6 @@ def test_ui_endpoint_info(harness: Harness, mocker: MockerFixture) -> None:
 def test_ui_endpoint_info_relation_databag(harness: Harness) -> None:
     harness.set_can_connect(CONTAINER_NAME, True)
     _, url = setup_ingress_relation(harness)
-    url = url.replace("http", "https").replace(":80", "")
 
     relation_id = harness.add_relation("ui-endpoint-info", "requirer")
     harness.add_relation_unit(relation_id, "requirer/0")
