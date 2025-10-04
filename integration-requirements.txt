@@ -2,5 +2,5 @@
 juju
 pytest
 pytest-asyncio
-pytest-operator==0.43.1
+pytest-operator==0.43.2
 requests
