@@ -45,6 +45,9 @@ def mock_get_version(harness: Harness):
 
 
 @pytest.fixture(autouse=True)
-def patch_file_open():
-    with patch("builtins.open", new_callable=mock_open, read_data="data") as f:
+def patch_certificate_transfer_integration_file_open():
+    breakpoint()
+    with patch(
+        "certificate_transfer_integration.open", new_callable=mock_open, read_data="data"
+    ) as f:
         yield f

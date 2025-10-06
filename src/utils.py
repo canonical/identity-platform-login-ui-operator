@@ -4,7 +4,13 @@
 
 """Utility functions for the login UI charm."""
 
+from functools import wraps
+from typing import Any, Callable, Optional, TypeVar
 from urllib.parse import urlparse, urlunparse
+
+from ops.charm import CharmBase
+
+CharmEventHandler = TypeVar("CharmEventHandler", bound=Callable[..., Any])
 
 
 def normalise_url(url: str) -> str:
@@ -34,3 +40,16 @@ def normalise_url(url: str) -> str:
     p = p._replace(netloc=p.netloc.rsplit(":", 1)[0])
 
     return urlunparse(p)
+
+
+def leader_unit(func: CharmEventHandler) -> CharmEventHandler:
+    """A decorator, applied to any event hook handler, to validate juju unit leadership."""
+
+    @wraps(func)
+    def wrapper(charm: CharmBase, *args: Any, **kwargs: Any) -> Optional[Any]:
+        if not charm.unit.is_leader():
+            return None
+
+        return func(charm, *args, **kwargs)
+
+    return wrapper  # type: ignore[return-value]
