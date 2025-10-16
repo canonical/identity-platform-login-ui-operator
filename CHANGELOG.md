@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.0.0](https://github.com/canonical/identity-platform-login-ui-operator/compare/v1.2.0...v2.0.0) (2025-10-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* add public-route and drop public and admin ingresses
+
+### Features
+
+* add public-route and drop public and admin ingresses ([52bd694](https://github.com/canonical/identity-platform-login-ui-operator/commit/52bd6947f71e21464370e15ba333c51058b8e837))
+
+
+### Bug Fixes
+
+* reinstate open_port method ([c37a140](https://github.com/canonical/identity-platform-login-ui-operator/commit/c37a140f845538f31d73ca139788f2a8040a1e50))
+
 ## [1.2.0](https://github.com/canonical/identity-platform-login-ui-operator/compare/v1.1.5...v1.2.0) (2025-10-02)
 
 
