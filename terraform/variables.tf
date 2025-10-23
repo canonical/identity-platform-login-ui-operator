@@ -47,3 +47,9 @@ variable "revision" {
   nullable    = true
   default     = null
 }
+
+variable "resources" {
+  description = "The charm resources"
+  type        = map(string)
+  default     = {}
+}
