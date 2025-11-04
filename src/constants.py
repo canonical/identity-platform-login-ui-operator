@@ -23,3 +23,4 @@ KRATOS_INTEGRATION_NAME = "kratos-info"
 HYDRA_INTEGRATION_NAME = "hydra-endpoint-info"
 INGRESS_INTEGRATION_NAME = "ingress"
 PUBLIC_ROUTE_INTEGRATION_NAME = "public-route"
+DEFAULT_FEATURE_FLAGS = ["password", "oidc", "totp", "webauthn"]

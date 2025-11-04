@@ -9,6 +9,7 @@ from ops.pebble import Error, Layer, LayerDict
 from constants import (
     APPLICATION_NAME,
     APPLICATION_PORT,
+    DEFAULT_FEATURE_FLAGS,
     WORKLOAD_CONTAINER_NAME,
     WORKLOAD_RUN_COMMAND,
 )
@@ -75,6 +76,11 @@ class PebbleService:
         kratos_info: KratosInfoData,
         tracing_data: TracingData,
     ) -> Layer:
+        flags = DEFAULT_FEATURE_FLAGS
+        if kratos_info:
+            # Login UI feature flags needs to be a comma separated string with no spaces
+            flags = ",".join(flag.strip() for flag in kratos_info.feature_flags if flag)
+
         container = {
             "override": "replace",
             "summary": "identity platform login ui",
@@ -92,6 +98,7 @@ class PebbleService:
                 "LOG_LEVEL": log_level,
                 "SUPPORT_EMAIL": support_email,
                 "DEBUG": log_level == "DEBUG",
+                "FEATURE_FLAGS": flags,
             },
         }
 
