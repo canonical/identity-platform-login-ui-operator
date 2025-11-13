@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.0.0](https://github.com/canonical/identity-platform-login-ui-operator/compare/v1.2.0...v2.0.0) (2025-11-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* add public-route and drop public and admin ingresses
+
+### Features
+
+* add public-route and drop public and admin ingresses ([52bd694](https://github.com/canonical/identity-platform-login-ui-operator/commit/52bd6947f71e21464370e15ba333c51058b8e837))
+
+
+### Bug Fixes
+
+* enable the charm resources in terraform module ([4c70a5c](https://github.com/canonical/identity-platform-login-ui-operator/commit/4c70a5cbb456fdb733a44817b6f02bacb8ea2221))
+* enable the charm resources in terraform module ([fdff633](https://github.com/canonical/identity-platform-login-ui-operator/commit/fdff633a207b1e754c331bfeaf5c196b43f34e46))
+* reinstate open_port method ([c37a140](https://github.com/canonical/identity-platform-login-ui-operator/commit/c37a140f845538f31d73ca139788f2a8040a1e50))
+* update OCI-image resource ([b574a0a](https://github.com/canonical/identity-platform-login-ui-operator/commit/b574a0a801d8c95ceb01ffe15204ed82f1fc8418))
+* update oci-image to ghcr.io/canonical/identity-platform-login-ui:v0.23.1 ([cefe3de](https://github.com/canonical/identity-platform-login-ui-operator/commit/cefe3deaaf4885018b70c49aec1e518f84448bc2))
+* upgrade tf module to use 1.0.0 syntax ([5a834d5](https://github.com/canonical/identity-platform-login-ui-operator/commit/5a834d52fce2c8b6b62ba0b159fa6f8e751f6f60))
+
 ## [1.2.0](https://github.com/canonical/identity-platform-login-ui-operator/compare/v1.1.5...v1.2.0) (2025-10-02)
 
 
