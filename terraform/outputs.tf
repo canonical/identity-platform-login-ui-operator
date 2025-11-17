@@ -9,7 +9,7 @@ output "app_name" {
 output "requires" {
   description = "The Juju integrations that the charm requires"
   value = {
-    ingress             = "ingress"
+    public-route        = "public-route"
     kratos-info         = "kratos-info"
     hydra-endpoint-info = "hydra-endpoint-info"
     logging             = "logging"
