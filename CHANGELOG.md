@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.0.1](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.0.0...v2.0.1) (2025-11-17)
+
+
+### Bug Fixes
+
+* switch to use -route relation in the tf module ([7f9718a](https://github.com/canonical/identity-platform-login-ui-operator/commit/7f9718a8a0e7faba7b43928703f16bf9877316ac))
+* update OCI-image resource ([#355](https://github.com/canonical/identity-platform-login-ui-operator/issues/355)) ([e92ff4b](https://github.com/canonical/identity-platform-login-ui-operator/commit/e92ff4b591b40d2742cc621ee6f1c130b3512cf3))
+* update oci-image to ghcr.io/canonical/identity-platform-login-ui:v0.24.0 ([4319828](https://github.com/canonical/identity-platform-login-ui-operator/commit/43198280a6d81d45d73e9353b4a82c2dfc430d56))
+
 ## [2.0.0](https://github.com/canonical/identity-platform-login-ui-operator/compare/v1.2.0...v2.0.0) (2025-11-13)
 
 
