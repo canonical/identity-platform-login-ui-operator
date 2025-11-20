@@ -4,6 +4,7 @@
 import json
 import logging
 from dataclasses import dataclass, field
+from typing import Optional
 from urllib.parse import urlparse
 
 from charms.hydra.v0.hydra_endpoints import (
@@ -54,6 +55,7 @@ class KratosInfoData:
     mfa_enabled: bool = False
     oidc_webauthn_sequencing_enabled: bool = False
     is_ready: bool = False
+    feature_flags: Optional[list[str]] = None
 
     @classmethod
     def load(cls, requirer: KratosInfoRequirer) -> "KratosInfoData":
@@ -72,6 +74,7 @@ class KratosInfoData:
             mfa_enabled=info.get("mfa_enabled"),
             oidc_webauthn_sequencing_enabled=info.get("oidc_webauthn_sequencing_enabled"),
             is_ready=requirer.is_ready(),
+            feature_flags=info.get("feature_flags", None),
         )
 
 

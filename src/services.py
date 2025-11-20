@@ -95,6 +95,9 @@ class PebbleService:
             },
         }
 
+        if kratos_info.feature_flags:
+            container["environment"]["FEATURE_FLAGS"] = kratos_info.feature_flags
+
         if kratos_info.is_ready:
             container["environment"]["MFA_ENABLED"] = kratos_info.mfa_enabled
             container["environment"]["OIDC_WEBAUTHN_SEQUENCING_ENABLED"] = (
