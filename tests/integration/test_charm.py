@@ -8,6 +8,7 @@ from pathlib import Path
 import jubilant
 import pytest
 import requests
+from conftest import integrate_dependencies
 from integration.constants import (
     LOGIN_UI_APP,
     LOGIN_UI_IMAGE,
@@ -16,8 +17,6 @@ from integration.constants import (
     TRAEFIK_PUBLIC_APP,
 )
 from integration.utils import wait_for_active_idle
-
-from conftest import integrate_dependencies
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +51,7 @@ def test_build_and_deploy(juju: jubilant.Juju, local_charm: Path) -> None:
     wait_for_active_idle(juju, apps=[LOGIN_UI_APP], timeout=5 * 60)
 
 
-def test_ingress_relation(juju: jubilant.Juju):
+def test_ingress_relation(juju: jubilant.Juju) -> None:
     """Test that the ingress relation is properly set up."""
     wait_for_active_idle(
         juju,
@@ -61,7 +60,7 @@ def test_ingress_relation(juju: jubilant.Juju):
     )
 
 
-def test_has_ingress(juju: jubilant.Juju, public_address: str):
+def test_has_ingress(juju: jubilant.Juju, public_address: str) -> None:
     """Test that the login UI is accessible via ingress."""
     # Get the traefik address and try to reach identity-platform-login-ui
     resp = requests.get(f"http://{public_address}/ui/login")
