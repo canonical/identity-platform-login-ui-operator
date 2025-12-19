@@ -20,13 +20,18 @@ def create_temp_juju_model(
         if model:
             assert juju.model is not None
             # Destroy `jubilant-*` model created by default
-            juju.destroy_model(juju.model, destroy_storage=True, force=True)
+            if juju.model.startswith("jubilant-"):
+                juju.destroy_model(juju.model, destroy_storage=True, force=True)
 
             # `CLIError` will be emitted if `--model` already exists so silently ignore
             # error and set the `model` attribute to the value of model.
             try:
                 juju.add_model(model)
-            except jubilant.CLIError:
+            except jubilant.CLIError as e:
+                # Model already exists, just use it
+                import logging
+
+                logging.debug(f"Model {model} already exists, reusing it: {e}")
                 juju.model = model
 
         juju.wait_timeout = 10 * 60

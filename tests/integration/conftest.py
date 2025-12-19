@@ -81,7 +81,12 @@ def local_charm(juju: jubilant.Juju) -> Path:
     # in GitHub CI, charms are built with charmcraftcache and uploaded to $CHARM_PATH
     charm: str | Path | None = os.getenv("CHARM_PATH")
     if not charm:
+        import shutil
         import subprocess
+
+        # Check if charmcraft is available
+        if not shutil.which("charmcraft"):
+            raise RuntimeError("charmcraft not found in PATH")
 
         subprocess.run(["charmcraft", "pack"], check=True)
         charms = list(Path(".").glob("*.charm"))
