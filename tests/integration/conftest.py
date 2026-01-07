@@ -2,44 +2,51 @@
 # See LICENSE file for licensing details.
 
 import os
-import uuid
+import secrets
+import subprocess
+from contextlib import suppress
 from pathlib import Path
-from typing import Generator, Iterator
+from typing import Generator
 
 import jubilant
 import pytest
 import requests
 from integration.constants import (
-    LOGIN_UI_APP,
+    APP_NAME,
     PUBLIC_ROUTE_INTEGRATION_NAME,
     TRAEFIK_PUBLIC_APP,
 )
-from integration.utils import create_temp_juju_model, unit_address
+from integration.utils import get_unit_address, juju_model_factory
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     """Add custom command-line options for model management and deployment control.
 
     This function adds the following options:
-        --keep-models: Keep the Juju model after the test is finished.
+        --keep-models, --no-teardown: Keep the Juju model after the test is finished.
         --model: Specify the Juju model to run the tests on.
-        --no-deploy: Skip deployment of the charm.
+        --no-deploy, --no-setup: Skip deployment of the charm.
     """
     parser.addoption(
         "--keep-models",
+        "--no-teardown",
         action="store_true",
+        dest="no_teardown",
         default=False,
         help="Keep the model after the test is finished.",
     )
     parser.addoption(
         "--model",
         action="store",
+        dest="model",
         default=None,
         help="The model to run the tests on.",
     )
     parser.addoption(
         "--no-deploy",
+        "--no-setup",
         action="store_true",
+        dest="no_setup",
         default=False,
         help="Skip deployment of the charm.",
     )
@@ -49,57 +56,74 @@ def pytest_configure(config: pytest.Config) -> None:
     """Register custom markers for test selection based on deployment and model management.
 
     This function registers the following markers:
-        skip_if_deployed: Skip tests if the charm is already deployed.
-        skip_if_keep_models: Skip tests if the --keep-models option is set.
+        setup: Skip tests if the charm is already deployed.
+        teardown: Skip tests if the no_teardown option is set.
     """
-    config.addinivalue_line("markers", "skip_if_deployed: skip test if deployed")
-    config.addinivalue_line("markers", "skip_if_keep_models: skip test if --keep-models is set.")
+    config.addinivalue_line("markers", "setup: tests that setup some parts of the environment")
+    config.addinivalue_line(
+        "markers", "teardown: tests that teardown some parts of the environment."
+    )
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     """Modify collected test items based on command-line options.
 
     This function skips tests with specific markers based on the provided command-line options:
-        - If --no-deploy is set, tests marked with "skip_if_deployed
+        - If no_setup is set, tests marked with "no_setup
           are skipped.
-        - If --keep-models is set, tests marked with "skip_if_keep_models"
+        - If no_teardown is set, tests marked with "no_teardown"
           are skipped.
     """
+    skip_setup = pytest.mark.skip(reason="no_setup provided")
+    skip_teardown = pytest.mark.skip(reason="no_teardown provided")
     for item in items:
-        if config.getoption("--no-deploy") and "skip_if_deployed" in item.keywords:
-            skip_deployed = pytest.mark.skip(reason="skipping deployment")
-            item.add_marker(skip_deployed)
-        if config.getoption("--keep-models") and "skip_if_keep_models" in item.keywords:
-            skip_keep_models = pytest.mark.skip(
-                reason="skipping test because --keep-models is set"
-            )
-            item.add_marker(skip_keep_models)
+        if config.getoption("no_setup") and "setup" in item.keywords:
+            item.add_marker(skip_setup)
+        if config.getoption("no_teardown") and "teardown" in item.keywords:
+            item.add_marker(skip_teardown)
 
 
 @pytest.fixture(scope="module")
-def juju(request: pytest.FixtureRequest) -> Iterator[jubilant.Juju]:
+def juju(request: pytest.FixtureRequest) -> Generator[jubilant.Juju, None, None]:
     """Create a temporary Juju model for integration tests."""
     model_name = request.config.getoption("--model")
     if not model_name:
-        model_name = f"test-login-ui-{uuid.uuid4().hex[-8:]}"
+        model_name = f"test-login-ui-{secrets.token_hex(4)}"
 
-    yield from create_temp_juju_model(request, model=model_name)
+    juju_ = juju_model_factory(model_name)
+    juju_.wait_timeout = 10 * 60
+
+    try:
+        yield juju_
+    finally:
+        if request.session.testsfailed:
+            log = juju_.debug_log(limit=1000)
+            print(log, end="")
+
+        no_teardown = bool(request.config.getoption("--no-teardown"))
+        keep_model = no_teardown or request.session.testsfailed > 0
+        if not keep_model:
+            with suppress(jubilant.CLIError):
+                args = [
+                    "destroy-model",
+                    juju_.model,
+                    "--no-prompt",
+                    "--destroy-storage",
+                    "--force",
+                ]
+                juju_._cli(*args, include_model=False, timeout=10 * 60)
 
 
-@pytest.fixture(scope="module")
-def local_charm(juju: jubilant.Juju) -> Path:
+@pytest.fixture(scope="session")
+def local_charm() -> Path:
     """Get the path to the charm-under-test."""
     # in GitHub CI, charms are built with charmcraftcache and uploaded to $CHARM_PATH
     charm: str | Path | None = os.getenv("CHARM_PATH")
     if not charm:
-        import subprocess
-
         subprocess.run(["charmcraft", "pack"], check=True)
-        charms = list(Path(".").glob("*.charm"))
-        if charms:
-            charm = charms[0].absolute()
-        else:
+        if not (charms := list(Path(".").glob("*.charm"))):
             raise RuntimeError("Charm not found and build failed")
+        charm = charms[0].absolute()
     return Path(charm)
 
 
@@ -112,10 +136,10 @@ def http_client() -> Generator[requests.Session, None, None]:
 
 def integrate_dependencies(juju: jubilant.Juju) -> None:
     """Integrate the login UI app with its dependencies."""
-    juju.integrate(f"{LOGIN_UI_APP}:{PUBLIC_ROUTE_INTEGRATION_NAME}", TRAEFIK_PUBLIC_APP)
+    juju.integrate(f"{APP_NAME}:{PUBLIC_ROUTE_INTEGRATION_NAME}", TRAEFIK_PUBLIC_APP)
 
 
 @pytest.fixture
 def public_address(juju: jubilant.Juju) -> str:
     """Get the public address of the Traefik application."""
-    return unit_address(juju, app_name=TRAEFIK_PUBLIC_APP)
+    return get_unit_address(juju, app_name=TRAEFIK_PUBLIC_APP)
