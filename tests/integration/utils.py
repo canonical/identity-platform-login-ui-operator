@@ -2,43 +2,27 @@
 # See LICENSE file for licensing details.
 
 from contextlib import contextmanager
-from typing import Iterator, Optional
+from typing import Callable, Iterator
 
 import jubilant
-import pytest
 import yaml
 from integration.constants import APP_NAME
 from tenacity import retry, stop_after_attempt, wait_exponential
 
+StatusPredicate = Callable[[jubilant.Status], bool]
 
-def create_temp_juju_model(
-    request: pytest.FixtureRequest, *, model: str = ""
-) -> Iterator[jubilant.Juju]:
-    """Create a temporary Juju model."""
-    keep_models = bool(request.config.getoption("--keep-models"))
 
-    # jubilant.temp_model is a context manager provided by the library
-    with jubilant.temp_model(keep=keep_models) as juju:
-        # Hack to get around `jubilant.temp_model` not accepting a custom model name
-        if model:
-            assert juju.model is not None
-            # Destroy `jubilant-*` model created by default
-            juju.destroy_model(juju.model, destroy_storage=True, force=True)
+def juju_model_factory(model_name: str) -> jubilant.Juju:
+    juju = jubilant.Juju()
+    try:
+        juju.add_model(model_name, config={"logging-config": "<root>=INFO"})
+    except jubilant.CLIError as e:
+        if "already exists" not in e.stderr:
+            raise
 
-            # `CLIError` will be emitted if `--model` already exists so silently ignore
-            # error and set the `model` attribute to the value of model.
-            try:
-                juju.add_model(model)
-            except jubilant.CLIError:
-                juju.model = model
+        juju.model = model_name
 
-        juju.wait_timeout = 10 * 60
-
-        yield juju
-
-        if request.session.testsfailed:
-            log = juju.debug_log(limit=1000)
-            print(log, end="")
+    return juju
 
 
 def get_unit_data(model: jubilant.Juju, unit_name: str) -> dict:
@@ -49,10 +33,10 @@ def get_unit_data(model: jubilant.Juju, unit_name: str) -> dict:
 
 
 def get_integration_data(
-    model: jubilant.Juju, app_name: str, integration_name: str, unit_num: int = 0
-) -> Optional[dict]:
+    juju: jubilant.Juju, app_name: str, integration_name: str, unit_num: int = 0
+) -> dict | None:
     """Get the integration data for a given integration."""
-    data = get_unit_data(model, f"{app_name}/{unit_num}")
+    data = get_unit_data(juju, f"{app_name}/{unit_num}")
     return next(
         (
             integration
@@ -68,37 +52,16 @@ def get_app_integration_data(
     app_name: str,
     integration_name: str,
     unit_num: int = 0,
-) -> Optional[dict]:
+) -> dict | None:
     """Get the application data for a given integration."""
     data = get_integration_data(model, app_name, integration_name, unit_num)
     return data["application-data"] if data else None
 
 
-def unit_address(model: jubilant.Juju, *, app_name: str, unit_num: int = 0) -> str:
-    """Get the address of a unit."""
-    status_yaml = model.cli("status", "--format", "yaml")
-    status = yaml.safe_load(status_yaml)
-    return status["applications"][app_name]["units"][f"{app_name}/{unit_num}"]["address"]
-
-
-def wait_for_active_idle(model: jubilant.Juju, apps: list[str], timeout: float = 1000) -> None:
-    """Wait for all applications and their units to be active and idle."""
-
-    def condition(s: jubilant.Status) -> bool:
-        return jubilant.all_active(s, *apps) and jubilant.all_agents_idle(s, *apps)
-
-    model.wait(condition, error=jubilant.any_error, timeout=timeout)
-
-
-def wait_for_status(
-    model: jubilant.Juju, apps: list[str], status: str, timeout: float = 1000
-) -> None:
-    """Wait for all applications and their units to reach the given status."""
-
-    def condition(s: jubilant.Status) -> bool:
-        return all(s.apps[app_name].app_status.current == status for app_name in apps)
-
-    model.wait(condition, timeout=timeout)
+def get_unit_address(juju: jubilant.Juju, app_name: str, unit_num: int = 0) -> str:
+    """Get the address of a given unit."""
+    data = get_unit_data(juju, f"{app_name}/{unit_num}")
+    return data["address"]
 
 
 @contextmanager
@@ -126,3 +89,35 @@ def remove_integration(
         yield
     finally:
         _reintegrate()
+
+
+def all_active(*apps: str) -> StatusPredicate:
+    return lambda status: jubilant.all_active(status, *apps)
+
+
+def all_blocked(*apps: str) -> StatusPredicate:
+    return lambda status: jubilant.all_blocked(status, *apps)
+
+
+def any_error(*apps: str) -> StatusPredicate:
+    return lambda status: jubilant.any_error(status, *apps)
+
+
+def is_active(app: str) -> StatusPredicate:
+    return lambda status: status.apps[app].is_active
+
+
+def is_blocked(app: str) -> StatusPredicate:
+    return lambda status: status.apps[app].is_blocked
+
+
+def unit_number(app: str, expected_num: int) -> StatusPredicate:
+    return lambda status: len(status.apps[app].units) == expected_num
+
+
+def and_(*predicates: StatusPredicate) -> StatusPredicate:
+    return lambda status: all(predicate(status) for predicate in predicates)
+
+
+def or_(*predicates: StatusPredicate) -> StatusPredicate:
+    return lambda status: any(predicate(status) for predicate in predicates)
