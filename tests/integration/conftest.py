@@ -1,47 +1,145 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import functools
 import os
+import secrets
+import subprocess
+from contextlib import suppress
 from pathlib import Path
-from typing import Awaitable, Callable
+from typing import Generator
 
-import pytest_asyncio
-import yaml
-from pytest_operator.plugin import OpsTest
-
-from constants import PUBLIC_ROUTE_INTEGRATION_NAME
-
-METADATA = yaml.safe_load(Path("./charmcraft.yaml").read_text())
-LOGIN_UI_APP = METADATA["name"]
-LOGIN_UI_IMAGE = METADATA["resources"]["oci-image"]["upstream-source"]
-# CA_APP = "self-signed-certificates"
-TRAEFIK_CHARM = "traefik-k8s"
-TRAEFIK_PUBLIC_APP = "traefik-public"
-PUBLIC_INGRESS_DOMAIN = "public"
+import jubilant
+import pytest
+import requests
+from integration.constants import (
+    APP_NAME,
+    PUBLIC_ROUTE_INTEGRATION_NAME,
+    TRAEFIK_PUBLIC_APP,
+)
+from integration.utils import get_unit_address, juju_model_factory
 
 
-async def integrate_dependencies(ops_test: OpsTest) -> None:
-    await ops_test.model.integrate(
-        f"{LOGIN_UI_APP}:{PUBLIC_ROUTE_INTEGRATION_NAME}", TRAEFIK_PUBLIC_APP
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Add custom command-line options for model management and deployment control.
+
+    This function adds the following options:
+        --keep-models, --no-teardown: Keep the Juju model after the test is finished.
+        --model: Specify the Juju model to run the tests on.
+        --no-deploy, --no-setup: Skip deployment of the charm.
+    """
+    parser.addoption(
+        "--keep-models",
+        "--no-teardown",
+        action="store_true",
+        dest="no_teardown",
+        default=False,
+        help="Keep the model after the test is finished.",
+    )
+    parser.addoption(
+        "--model",
+        action="store",
+        dest="model",
+        default=None,
+        help="The model to run the tests on.",
+    )
+    parser.addoption(
+        "--no-deploy",
+        "--no-setup",
+        action="store_true",
+        dest="no_setup",
+        default=False,
+        help="Skip deployment of the charm.",
     )
 
 
-@pytest_asyncio.fixture(scope="module")
-async def local_charm(ops_test: OpsTest) -> Path:
+def pytest_configure(config: pytest.Config) -> None:
+    """Register custom markers for test selection based on deployment and model management.
+
+    This function registers the following markers:
+        setup: Skip tests if the charm is already deployed.
+        teardown: Skip tests if the no_teardown option is set.
+    """
+    config.addinivalue_line("markers", "setup: tests that setup some parts of the environment")
+    config.addinivalue_line(
+        "markers", "teardown: tests that teardown some parts of the environment."
+    )
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Modify collected test items based on command-line options.
+
+    This function skips tests with specific markers based on the provided command-line options:
+        - If no_setup is set, tests marked with "no_setup
+          are skipped.
+        - If no_teardown is set, tests marked with "no_teardown"
+          are skipped.
+    """
+    skip_setup = pytest.mark.skip(reason="no_setup provided")
+    skip_teardown = pytest.mark.skip(reason="no_teardown provided")
+    for item in items:
+        if config.getoption("no_setup") and "setup" in item.keywords:
+            item.add_marker(skip_setup)
+        if config.getoption("no_teardown") and "teardown" in item.keywords:
+            item.add_marker(skip_teardown)
+
+
+@pytest.fixture(scope="module")
+def juju(request: pytest.FixtureRequest) -> Generator[jubilant.Juju, None, None]:
+    """Create a temporary Juju model for integration tests."""
+    model_name = request.config.getoption("--model")
+    if not model_name:
+        model_name = f"test-login-ui-{secrets.token_hex(4)}"
+
+    juju_ = juju_model_factory(model_name)
+    juju_.wait_timeout = 10 * 60
+
+    try:
+        yield juju_
+    finally:
+        if request.session.testsfailed:
+            log = juju_.debug_log(limit=1000)
+            print(log, end="")
+
+        no_teardown = bool(request.config.getoption("--no-teardown"))
+        keep_model = no_teardown or request.session.testsfailed > 0
+        if not keep_model:
+            with suppress(jubilant.CLIError):
+                args = [
+                    "destroy-model",
+                    juju_.model,
+                    "--no-prompt",
+                    "--destroy-storage",
+                    "--force",
+                ]
+                juju_._cli(*args, include_model=False, timeout=10 * 60)
+
+
+@pytest.fixture(scope="session")
+def local_charm() -> Path:
+    """Get the path to the charm-under-test."""
     # in GitHub CI, charms are built with charmcraftcache and uploaded to $CHARM_PATH
-    charm = os.getenv("CHARM_PATH")
+    charm: str | Path | None = os.getenv("CHARM_PATH")
     if not charm:
-        # fall back to build locally - required when run outside of GitHub CI
-        charm = await ops_test.build_charm(".")
-    return charm
+        subprocess.run(["charmcraft", "pack"], check=True)
+        if not (charms := list(Path(".").glob("*.charm"))):
+            raise RuntimeError("Charm not found and build failed")
+        charm = charms[0].absolute()
+    return Path(charm)
 
 
-async def unit_address(ops_test: OpsTest, *, app_name: str, unit_num: int = 0) -> str:
-    status = await ops_test.model.get_status()
-    return status["applications"][app_name]["units"][f"{app_name}/{unit_num}"]["address"]
+@pytest.fixture
+def http_client() -> Generator[requests.Session, None, None]:
+    with requests.Session() as client:
+        client.verify = False
+        yield client
 
 
-@pytest_asyncio.fixture
-async def public_address() -> Callable[[OpsTest, int], Awaitable[str]]:
-    return functools.partial(unit_address, app_name=TRAEFIK_PUBLIC_APP)
+def integrate_dependencies(juju: jubilant.Juju) -> None:
+    """Integrate the login UI app with its dependencies."""
+    juju.integrate(f"{APP_NAME}:{PUBLIC_ROUTE_INTEGRATION_NAME}", TRAEFIK_PUBLIC_APP)
+
+
+@pytest.fixture
+def public_address(juju: jubilant.Juju) -> str:
+    """Get the public address of the Traefik application."""
+    return get_unit_address(juju, app_name=TRAEFIK_PUBLIC_APP)
