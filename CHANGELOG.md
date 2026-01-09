@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.1.0](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.0.1...v2.1.0) (2026-01-09)
+
+
+### Features
+
+* add feature flags handling ([f44457e](https://github.com/canonical/identity-platform-login-ui-operator/commit/f44457e862cf8054d4567fc5e707be117c238158))
+
+
+### Bug Fixes
+
+* update OCI-image resource ([#376](https://github.com/canonical/identity-platform-login-ui-operator/issues/376)) ([71d72dd](https://github.com/canonical/identity-platform-login-ui-operator/commit/71d72dd8887d9379839679b224d4820f3d4e8efd))
+* update OCI-image resource ([#390](https://github.com/canonical/identity-platform-login-ui-operator/issues/390)) ([a875760](https://github.com/canonical/identity-platform-login-ui-operator/commit/a875760c62ecf6daeeced981511022d0fa5c38f4))
+* update oci-image to ghcr.io/canonical/identity-platform-login-ui:v0.24.1 ([2417554](https://github.com/canonical/identity-platform-login-ui-operator/commit/2417554a37cfcd83dc43a4c192d122ee74eb9a0f))
+* update oci-image to ghcr.io/canonical/identity-platform-login-ui:v0.24.2 ([48e92fd](https://github.com/canonical/identity-platform-login-ui-operator/commit/48e92fd15a7cf92f5ccf5fe9b6d3c39215c06cae))
+
 ## [2.0.1](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.0.0...v2.0.1) (2025-11-17)
 
 
