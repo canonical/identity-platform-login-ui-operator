@@ -54,7 +54,7 @@ from constants import (
     HYDRA_INTEGRATION_NAME,
     KRATOS_INTEGRATION_NAME,
     LOGGING_INTEGRATION_NAME,
-    PEER,
+    PEER_INTEGRATION_NAME,
     PROMETHEUS_INTEGRATION_NAME,
     PUBLIC_ROUTE_INTEGRATION_NAME,
     TRACING_INTEGRATION_NAME,
@@ -148,6 +148,14 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self.framework.observe(self.tracing.on.endpoint_changed, self._holistic_handler)
         self.framework.observe(self.tracing.on.endpoint_removed, self._holistic_handler)
 
+        # peers
+        self.framework.observe(
+            self.on[PEER_INTEGRATION_NAME].relation_created, self._holistic_handler
+        )
+        self.framework.observe(
+            self.on[PEER_INTEGRATION_NAME].relation_changed, self._holistic_handler
+        )
+
         # public route
         self.framework.observe(
             self.on[PUBLIC_ROUTE_INTEGRATION_NAME].relation_joined,
@@ -172,7 +180,6 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self.unit.status = MaintenanceStatus("Configuring resources")
         # Necessary directory for log forwarding
         if not self._pebble_service.can_connect():
-            event.defer()
             self.unit.status = WaitingStatus("Waiting to connect to Login_UI container")
             return
 
@@ -188,15 +195,11 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
     def _holistic_handler(self, event: HookEvent) -> None:
         if not self._pebble_service.can_connect():
-            event.defer()
-            logger.info("Cannot connect to Login_UI container. Deferring the event.")
             self.unit.status = WaitingStatus("Waiting to connect to Login_UI container")
             return
 
         if not self._peers:
             self.unit.status = WaitingStatus("Waiting for peer relation")
-            logger.info("Waiting for peer relation. Deferring the event.")
-            event.defer()
             return
 
         if self.unit.is_leader() and not self._cookie_encryption_key:
@@ -245,7 +248,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
     @property
     def _peers(self) -> Optional[Relation]:
         """Fetch the peer relation."""
-        return self.model.get_relation(PEER)
+        return self.model.get_relation(PEER_INTEGRATION_NAME)
 
     @property
     def _cookie_encryption_key(self) -> Optional[str]:
