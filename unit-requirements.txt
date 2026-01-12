@@ -1,5 +1,5 @@
 pytest
 pytest-mock
 coverage[toml]
-requests
+ops[testing]
 -r requirements.txt

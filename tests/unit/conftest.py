@@ -3,14 +3,15 @@
 
 """Unit test configuration."""
 
+import json
 from unittest.mock import mock_open, patch
 
 import ops.testing
 import pytest
-from ops.testing import Harness
 from pytest_mock import MockerFixture
 
 from charm import IdentityPlatformLoginUiOperatorCharm
+from constants import WORKLOAD_CONTAINER_NAME
 
 
 @pytest.fixture(autouse=True)
@@ -27,27 +28,103 @@ def mocked_k8s_resource_patch(mocker: MockerFixture) -> None:
     )
 
 
-@pytest.fixture()
-def harness(mocked_k8s_resource_patch: None) -> ops.testing.Harness:
-    """Initialize harness with Charm."""
-    harness = ops.testing.Harness(IdentityPlatformLoginUiOperatorCharm)
-    harness.set_model_name("testing")
-    harness.begin()
-    harness.add_network("10.0.0.10")
-    return harness
+@pytest.fixture
+def context() -> ops.testing.Context:
+    """Initialize context with Charm."""
+    return ops.testing.Context(IdentityPlatformLoginUiOperatorCharm)
 
 
-@pytest.fixture(autouse=True)
-def mock_get_version(harness: Harness):
-    harness.handle_exec(
-        "login-ui", ["identity-platform-login-ui", "--version"], result="App Version: 1.42.0"
+@pytest.fixture
+def base_state() -> ops.testing.State:
+    """Initialize base state."""
+    return ops.testing.State(
+        leader=True,
+        containers=[
+            ops.testing.Container(
+                name=WORKLOAD_CONTAINER_NAME,
+                can_connect=True,
+                execs={
+                    ops.testing.Exec(
+                        ["identity-platform-login-ui", "version"],
+                        return_code=0,
+                        stdout="App Version: 1.42.0",
+                    )
+                },
+            )
+        ],
     )
 
 
 @pytest.fixture(autouse=True)
 def patch_certificate_transfer_integration_file_open():
-    breakpoint()
     with patch(
         "certificate_transfer_integration.open", new_callable=mock_open, read_data="data"
     ) as f:
         yield f
+
+
+@pytest.fixture
+def peer_relation() -> ops.testing.PeerRelation:
+    return ops.testing.PeerRelation(
+        endpoint="identity-platform-login-ui",
+        interface="identity_platform_login_ui_peers",
+    )
+
+
+@pytest.fixture
+def kratos_relation() -> ops.testing.Relation:
+    return ops.testing.Relation(
+        endpoint="kratos-info",
+        interface="kratos_info",
+        remote_app_name="kratos",
+        remote_app_data={
+            "admin_endpoint": "http://kratos-admin-url:80/testing-kratos",
+            "public_endpoint": "http://kratos-public-url:80/testing-kratos",
+            "mfa_enabled": "True",
+            "oidc_webauthn_sequencing_enabled": "False",
+            "feature_flags": "password,totp,webauthn,backup_codes,account_linking",
+        },
+    )
+
+
+@pytest.fixture
+def hydra_relation() -> ops.testing.Relation:
+    return ops.testing.Relation(
+        endpoint="hydra-endpoint-info",
+        interface="hydra_endpoints",
+        remote_app_name="hydra",
+        remote_app_data={
+            "admin_endpoint": "http://hydra-admin-url:80/testing-hydra",
+            "public_endpoint": "http://hydra-public-url:80/testing-hydra",
+        },
+    )
+
+
+@pytest.fixture
+def tempo_relation() -> ops.testing.Relation:
+    return ops.testing.Relation(
+        endpoint="tracing",
+        interface="tracing",
+        remote_app_name="tempo-k8s",
+        remote_app_data={
+            "receivers": json.dumps([
+                {
+                    "protocol": {"name": "otlp_http", "type": "http"},
+                    "url": "http://tempo-k8s-0.tempo-k8s-endpoints.namespace.svc.cluster.local:4318",
+                },
+                {
+                    "protocol": {"name": "otlp_grpc", "type": "grpc"},
+                    "url": "http://tempo-k8s-0.tempo-k8s-endpoints.namespace.svc.cluster.local:4317",
+                },
+            ])
+        },
+    )
+
+
+@pytest.fixture
+def public_route_relation() -> ops.testing.Relation:
+    return ops.testing.Relation(
+        endpoint="public-route",
+        interface="traefik_route",
+        remote_app_name="traefik-k8s",
+    )
