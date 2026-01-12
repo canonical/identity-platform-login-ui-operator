@@ -35,23 +35,38 @@ def context() -> ops.testing.Context:
 
 
 @pytest.fixture
-def base_state() -> ops.testing.State:
-    """Initialize base state."""
+def container_can_connect() -> ops.testing.Container:
+    """Workload container in connectable state."""
+    return ops.testing.Container(
+        name=WORKLOAD_CONTAINER_NAME,
+        can_connect=True,
+        execs={
+            ops.testing.Exec(
+                ["identity-platform-login-ui", "version"],
+                return_code=0,
+                stdout="App Version: 1.42.0",
+            )
+        },
+    )
+
+
+@pytest.fixture
+def container_cannot_connect() -> ops.testing.Container:
+    """Workload container in non-connectable state."""
+    return ops.testing.Container(
+        name=WORKLOAD_CONTAINER_NAME,
+        can_connect=False,
+    )
+
+
+@pytest.fixture
+def base_state(
+    container_can_connect: ops.testing.Container,
+) -> ops.testing.State:
+    """Base charm state: leader with connectable container."""
     return ops.testing.State(
         leader=True,
-        containers=[
-            ops.testing.Container(
-                name=WORKLOAD_CONTAINER_NAME,
-                can_connect=True,
-                execs={
-                    ops.testing.Exec(
-                        ["identity-platform-login-ui", "version"],
-                        return_code=0,
-                        stdout="App Version: 1.42.0",
-                    )
-                },
-            )
-        ],
+        containers=[container_can_connect],
     )
 
 
