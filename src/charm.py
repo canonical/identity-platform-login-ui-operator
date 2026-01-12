@@ -199,7 +199,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             event.defer()
             return
 
-        if not self._cookie_encryption_key:
+        if self.unit.is_leader() and not self._cookie_encryption_key:
             self._peers.data[self.app][COOKIES_KEY] = secrets.token_hex(16)
 
         self.cert_transfer.push_ca_certs()
