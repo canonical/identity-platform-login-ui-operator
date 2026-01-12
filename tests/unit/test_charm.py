@@ -4,11 +4,13 @@
 """Test functions for unit testing Identity Platform Login UI Operator."""
 
 from dataclasses import replace
+from unittest.mock import patch
 
 import ops.testing
-from ops import ActiveStatus, WaitingStatus
+from ops import ActiveStatus, BlockedStatus, WaitingStatus
 
 from constants import COOKIES_KEY, WORKLOAD_CONTAINER_NAME, WORKLOAD_RUN_COMMAND
+from exceptions import PebbleServiceError
 
 
 def test_not_leader(
@@ -176,4 +178,68 @@ def test_traefik_route_integration(
     container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
     state_out = context.run(context.on.pebble_ready(container), state_in)
 
+    assert state_out.unit_status == ActiveStatus()
+
+
+def test_config_changed(
+    context: ops.testing.Context,
+    base_state: ops.testing.State,
+    peer_relation: ops.testing.PeerRelation,
+) -> None:
+    state_in = replace(base_state, relations=[peer_relation])
+    state_out = context.run(context.on.config_changed(), state_in)
+    assert state_out.unit_status == ActiveStatus()
+
+
+def test_pebble_service_error_handling(
+    context: ops.testing.Context,
+    base_state: ops.testing.State,
+    peer_relation: ops.testing.PeerRelation,
+) -> None:
+    state_in = replace(base_state, relations=[peer_relation])
+    container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
+
+    with patch("services.PebbleService.plan", side_effect=PebbleServiceError("Plan failed")):
+        state_out = context.run(context.on.pebble_ready(container), state_in)
+
+    assert state_out.unit_status == BlockedStatus("Failed to replan, please consult the logs")
+
+
+def test_public_route_broken(
+    context: ops.testing.Context,
+    base_state: ops.testing.State,
+    peer_relation: ops.testing.PeerRelation,
+    public_route_relation: ops.testing.Relation,
+) -> None:
+    state_in = replace(base_state, relations=[peer_relation, public_route_relation])
+    state_out = context.run(context.on.relation_broken(public_route_relation), state_in)
+    assert state_out.unit_status == ActiveStatus()
+
+
+def test_config_changed_cannot_connect(
+    context: ops.testing.Context,
+    base_state: ops.testing.State,
+    peer_relation: ops.testing.PeerRelation,
+) -> None:
+    state_in = replace(base_state, relations=[peer_relation])
+    original_container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
+    new_container = replace(original_container, can_connect=False)
+    # Reconstruct state
+    new_containers = [
+        new_container if c.name == WORKLOAD_CONTAINER_NAME else c for c in state_in.containers
+    ]
+    state_in = replace(state_in, containers=new_containers)
+
+    state_out = context.run(context.on.config_changed(), state_in)
+    assert state_out.unit_status == WaitingStatus("Waiting to connect to Login_UI container")
+
+
+def test_public_route_changed(
+    context: ops.testing.Context,
+    base_state: ops.testing.State,
+    peer_relation: ops.testing.PeerRelation,
+    public_route_relation: ops.testing.Relation,
+) -> None:
+    state_in = replace(base_state, relations=[peer_relation, public_route_relation])
+    state_out = context.run(context.on.relation_changed(public_route_relation), state_in)
     assert state_out.unit_status == ActiveStatus()
