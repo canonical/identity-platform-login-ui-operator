@@ -59,14 +59,38 @@ def container_cannot_connect() -> ops.testing.Container:
     )
 
 
-@pytest.fixture
-def base_state(
-    container_can_connect: ops.testing.Container,
+def create_state(
+    *,
+    leader: bool = True,
+    can_connect: bool = True,
+    container: ops.testing.Container | None = None,
+    relations: list[ops.testing.Relation] | None = None,
 ) -> ops.testing.State:
-    """Base charm state: leader with connectable container."""
+    """Factory function to create charm state with explicit parameters.
+
+    Args:
+        leader: Whether this unit is the leader
+        can_connect: Whether the workload container can connect (ignored if container provided)
+        container: Custom container to use (overrides can_connect if provided)
+        relations: List of relations to include in the state
+    """
+    if container is None:
+        container = ops.testing.Container(
+            name=WORKLOAD_CONTAINER_NAME,
+            can_connect=can_connect,
+            execs={
+                ops.testing.Exec(
+                    ["identity-platform-login-ui", "version"],
+                    return_code=0,
+                    stdout="App Version: 1.42.0",
+                )
+            } if can_connect else {},
+        )
+
     return ops.testing.State(
-        leader=True,
-        containers=[container_can_connect],
+        leader=leader,
+        containers=[container],
+        relations=relations or [],
     )
 
 

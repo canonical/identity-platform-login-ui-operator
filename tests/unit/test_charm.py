@@ -3,7 +3,6 @@
 
 """Test functions for unit testing Identity Platform Login UI Operator."""
 
-from dataclasses import replace
 from unittest.mock import patch
 
 import ops.testing
@@ -12,17 +11,18 @@ from ops import ActiveStatus, BlockedStatus, WaitingStatus
 from constants import COOKIES_KEY, WORKLOAD_CONTAINER_NAME, WORKLOAD_RUN_COMMAND
 from exceptions import PebbleServiceError
 
+from .conftest import create_state
+
 
 class TestPebbleReadyEvent:
     """Tests for identity-platform-login-ui-pebble-ready event handling."""
     def test_pebble_ready_can_connect(
         self,
         context: ops.testing.Context,
-        base_state: ops.testing.State,
         peer_relation: ops.testing.PeerRelation,
     ) -> None:
         """Test installation with connection."""
-        state_in = replace(base_state, relations=[peer_relation])
+        state_in = create_state(relations=[peer_relation])
         container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
 
         state_out = context.run(context.on.pebble_ready(container), state_in)
@@ -32,41 +32,34 @@ class TestPebbleReadyEvent:
     def test_pebble_ready_cannot_connect(
         self,
         context: ops.testing.Context,
-        base_state: ops.testing.State,
         peer_relation: ops.testing.PeerRelation,
     ) -> None:
         """Test installation with connection."""
-        state_in = replace(base_state, relations=[peer_relation])
-        original_container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
-        new_container = replace(original_container, can_connect=False)
-        new_containers = [
-            new_container if c.name == WORKLOAD_CONTAINER_NAME else c for c in state_in.containers
-        ]
-        state_in = replace(state_in, containers=new_containers)
+        state_in = create_state(can_connect=False, relations=[peer_relation])
+        container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
 
-        state_out = context.run(context.on.pebble_ready(new_container), state_in)
+        state_out = context.run(context.on.pebble_ready(container), state_in)
 
         assert state_out.unit_status == WaitingStatus("Waiting to connect to Login_UI container")
 
     def test_pebble_ready_missing_peer_relation(
         self,
         context: ops.testing.Context,
-        base_state: ops.testing.State,
     ) -> None:
-        container = base_state.get_container(WORKLOAD_CONTAINER_NAME)
+        state_in = create_state()
+        container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
 
-        state_out = context.run(context.on.pebble_ready(container), base_state)
+        state_out = context.run(context.on.pebble_ready(container), state_in)
 
         assert state_out.unit_status == WaitingStatus("Waiting for peer relation")
 
     def test_pebble_ready_layer_configuration(
         self,
         context: ops.testing.Context,
-        base_state: ops.testing.State,
         peer_relation: ops.testing.PeerRelation,
     ) -> None:
         """Test Pebble Layer after updates."""
-        state_in = replace(base_state, relations=[peer_relation])
+        state_in = create_state(relations=[peer_relation])
         container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
 
         state_out = context.run(context.on.pebble_ready(container), state_in)
@@ -92,27 +85,18 @@ class TestConfigChangedEvent:
     def test_config_changed_can_connect(
         self,
         context: ops.testing.Context,
-        base_state: ops.testing.State,
         peer_relation: ops.testing.PeerRelation,
     ) -> None:
-        state_in = replace(base_state, relations=[peer_relation])
+        state_in = create_state(relations=[peer_relation])
         state_out = context.run(context.on.config_changed(), state_in)
         assert state_out.unit_status == ActiveStatus()
 
     def test_config_changed_cannot_connect(
         self,
         context: ops.testing.Context,
-        base_state: ops.testing.State,
         peer_relation: ops.testing.PeerRelation,
     ) -> None:
-        state_in = replace(base_state, relations=[peer_relation])
-        original_container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
-        new_container = replace(original_container, can_connect=False)
-        # Reconstruct state
-        new_containers = [
-            new_container if c.name == WORKLOAD_CONTAINER_NAME else c for c in state_in.containers
-        ]
-        state_in = replace(state_in, containers=new_containers)
+        state_in = create_state(can_connect=False, relations=[peer_relation])
 
         state_out = context.run(context.on.config_changed(), state_in)
         assert state_out.unit_status == WaitingStatus("Waiting to connect to Login_UI container")
@@ -124,12 +108,11 @@ class TestKratosRelationEvents:
     def test_layer_env_updated_with_kratos_info(
         self,
         context: ops.testing.Context,
-        base_state: ops.testing.State,
         peer_relation: ops.testing.PeerRelation,
         kratos_relation: ops.testing.Relation,
     ) -> None:
         """Test Pebble Layer when kratos relation data is in place."""
-        state_in = replace(base_state, relations=[peer_relation, kratos_relation])
+        state_in = create_state(relations=[peer_relation, kratos_relation])
         container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
         state_out = context.run(context.on.pebble_ready(container), state_in)
 
@@ -155,12 +138,11 @@ class TestHydraRelationEvents:
     def test_layer_updated_with_hydra_endpoint_info(
         self,
         context: ops.testing.Context,
-        base_state: ops.testing.State,
         peer_relation: ops.testing.PeerRelation,
         hydra_relation: ops.testing.Relation,
     ) -> None:
         """Test Pebble Layer when relation data is in place."""
-        state_in = replace(base_state, relations=[peer_relation, hydra_relation])
+        state_in = create_state(relations=[peer_relation, hydra_relation])
         container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
         state_out = context.run(context.on.pebble_ready(container), state_in)
 
@@ -177,12 +159,11 @@ class TestTempoRelationEvents:
     def test_layer_updated_with_tracing_endpoint_info(
         self,
         context: ops.testing.Context,
-        base_state: ops.testing.State,
         peer_relation: ops.testing.PeerRelation,
         tempo_relation: ops.testing.Relation,
     ) -> None:
         """Test Pebble Layer when relation data is in place."""
-        state_in = replace(base_state, relations=[peer_relation, tempo_relation])
+        state_in = create_state(relations=[peer_relation, tempo_relation])
         container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
         state_out = context.run(context.on.pebble_ready(container), state_in)
 
@@ -207,12 +188,11 @@ class TestPublicRouteRelationEvents:
     def test_traefik_route_integration(
         self,
         context: ops.testing.Context,
-        base_state: ops.testing.State,
         peer_relation: ops.testing.PeerRelation,
         public_route_relation: ops.testing.Relation,
     ) -> None:
         """Test integration with Traefik."""
-        state_in = replace(base_state, relations=[peer_relation, public_route_relation])
+        state_in = create_state(relations=[peer_relation, public_route_relation])
         container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
         state_out = context.run(context.on.pebble_ready(container), state_in)
 
@@ -221,22 +201,20 @@ class TestPublicRouteRelationEvents:
     def test_public_route_broken(
         self,
         context: ops.testing.Context,
-        base_state: ops.testing.State,
         peer_relation: ops.testing.PeerRelation,
         public_route_relation: ops.testing.Relation,
     ) -> None:
-        state_in = replace(base_state, relations=[peer_relation, public_route_relation])
+        state_in = create_state(relations=[peer_relation, public_route_relation])
         state_out = context.run(context.on.relation_broken(public_route_relation), state_in)
         assert state_out.unit_status == ActiveStatus()
 
     def test_public_route_changed(
         self,
         context: ops.testing.Context,
-        base_state: ops.testing.State,
         peer_relation: ops.testing.PeerRelation,
         public_route_relation: ops.testing.Relation,
     ) -> None:
-        state_in = replace(base_state, relations=[peer_relation, public_route_relation])
+        state_in = create_state(relations=[peer_relation, public_route_relation])
         state_out = context.run(context.on.relation_changed(public_route_relation), state_in)
         assert state_out.unit_status == ActiveStatus()
 
@@ -288,10 +266,9 @@ class TestStatusManagement:
     def test_pebble_service_error_handling(
         self,
         context: ops.testing.Context,
-        base_state: ops.testing.State,
         peer_relation: ops.testing.PeerRelation,
     ) -> None:
-        state_in = replace(base_state, relations=[peer_relation])
+        state_in = create_state(relations=[peer_relation])
         container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
 
         with patch("services.PebbleService.plan", side_effect=PebbleServiceError("Plan failed")):
