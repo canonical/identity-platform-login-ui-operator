@@ -1,6 +1,5 @@
 -r requirements.txt
-juju
+jubilant
 pytest
-pytest-asyncio
-pytest-operator==0.43.2
 requests
+tenacity

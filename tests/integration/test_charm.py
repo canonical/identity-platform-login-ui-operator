@@ -2,72 +2,144 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import asyncio
 import logging
 from pathlib import Path
 from typing import Callable
 
+import jubilant
 import pytest
 import requests
-from conftest import (
-    LOGIN_UI_APP,
+from integration.conftest import integrate_dependencies
+from integration.constants import (
+    APP_NAME,
     LOGIN_UI_IMAGE,
     PUBLIC_INGRESS_DOMAIN,
+    PUBLIC_ROUTE_INTEGRATION_NAME,
     TRAEFIK_CHARM,
     TRAEFIK_PUBLIC_APP,
-    integrate_dependencies,
 )
-from pytest_operator.plugin import OpsTest
+from integration.utils import (
+    StatusPredicate,
+    all_active,
+    and_,
+    any_error,
+    get_unit_address,
+    is_active,
+    remove_integration,
+    unit_number,
+)
 
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.skip_if_deployed
-@pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest, local_charm: Path) -> None:
+@pytest.mark.setup
+def test_build_and_deploy(juju: jubilant.Juju, local_charm: Path) -> None:
+    """Build the charm-under-test and deploy it together with related charms.
+
+    Assert on the unit status before any relations/configurations take place.
+    """
     # Deploy dependencies
-    await ops_test.model.deploy(
+    juju.deploy(
         TRAEFIK_CHARM,
-        application_name=TRAEFIK_PUBLIC_APP,
+        app=TRAEFIK_PUBLIC_APP,
         channel="latest/edge",  # using edge to take advantage of the raw args in traefik route
         config={"external_hostname": PUBLIC_INGRESS_DOMAIN},
         trust=True,
     )
-    # await ops_test.model.integrate(f"{TRAEFIK_PUBLIC_APP}:certificates", f"{CA_APP}:certificates")
 
-    await ops_test.model.deploy(
-        application_name=LOGIN_UI_APP,
-        entity_url=str(local_charm),
+    juju.deploy(
+        str(local_charm),
+        app=APP_NAME,
         resources={"oci-image": LOGIN_UI_IMAGE},
-        series="jammy",
+        base="ubuntu@22.04",
         trust=True,
     )
 
     # Integrate with dependencies
-    await integrate_dependencies(ops_test)
+    integrate_dependencies(juju)
 
-    await asyncio.gather(
-        ops_test.model.wait_for_idle(
-            apps=[LOGIN_UI_APP],
-            raise_on_blocked=False,
-            status="active",
-            timeout=5 * 60,
-        ),
+    juju.wait(
+        ready=all_active(APP_NAME, TRAEFIK_PUBLIC_APP),
+        error=any_error(APP_NAME, TRAEFIK_PUBLIC_APP),
+        timeout=10 * 60,
     )
 
 
-async def test_ingress_relation(ops_test: OpsTest):
-    await ops_test.model.wait_for_idle(
-        apps=[TRAEFIK_PUBLIC_APP],
-        raise_on_blocked=True,
-        status="active",
-        timeout=5 * 60,
-    )
+def test_app_health(
+    juju: jubilant.Juju,
+    http_client: requests.Session,
+) -> None:
+    public_address = get_unit_address(juju, app_name=APP_NAME, unit_num=0)
+
+    resp = http_client.get(f"http://{public_address}:8080/api/v0/status")
+
+    resp.raise_for_status()
 
 
-async def test_has_ingress(ops_test: OpsTest, public_address: Callable):
+def test_has_ingress(
+    juju: jubilant.Juju, public_address: str, http_client: requests.Session
+) -> None:
+    """Test that the login UI is accessible via ingress."""
     # Get the traefik address and try to reach identity-platform-login-ui
-    address = await public_address(ops_test)
-    resp = requests.get(f"http://{address}/ui/login")
+    resp = http_client.get(f"http://{public_address}/ui/login")
 
     assert resp.status_code == 200
+
+
+def test_scaling_up(juju: jubilant.Juju) -> None:
+    """Test scaling up."""
+    juju.cli("scale-application", APP_NAME, "2")
+    juju.wait(
+        ready=and_(
+            all_active(APP_NAME),
+            unit_number(app=APP_NAME, expected_num=2),
+        ),
+        error=any_error(APP_NAME),
+        timeout=10 * 60,
+    )
+
+
+@pytest.mark.parametrize(
+    "remote_app_name,integration_name,is_status",
+    [
+        (TRAEFIK_PUBLIC_APP, PUBLIC_ROUTE_INTEGRATION_NAME, is_active),
+    ],
+)
+def test_remove_integration(
+    juju: jubilant.Juju,
+    remote_app_name: str,
+    integration_name: str,
+    is_status: Callable[[str], StatusPredicate],
+) -> None:
+    """Test removing and re-adding integration."""
+    with remove_integration(juju, remote_app_name, integration_name):
+        juju.wait(
+            ready=is_status(APP_NAME),
+            error=any_error(APP_NAME),
+            timeout=10 * 60,
+        )
+    juju.wait(
+        ready=all_active(APP_NAME, remote_app_name),
+        error=any_error(APP_NAME, remote_app_name),
+        timeout=10 * 60,
+    )
+
+
+def test_scaling_down(juju: jubilant.Juju) -> None:
+    """Test scaling down."""
+    juju.cli("scale-application", APP_NAME, "1")
+    juju.wait(
+        ready=and_(
+            all_active(APP_NAME),
+            unit_number(app=APP_NAME, expected_num=1),
+        ),
+        error=any_error(APP_NAME),
+        timeout=10 * 60,
+    )
+
+
+@pytest.mark.teardown
+def test_remove_application(juju: jubilant.Juju) -> None:
+    """Test removing the application."""
+    juju.remove_application(APP_NAME, force=True, destroy_storage=True)
+    juju.wait(lambda s: APP_NAME not in s.apps, timeout=10 * 60)
