@@ -106,12 +106,14 @@ def juju(request: pytest.FixtureRequest) -> Generator[jubilant.Juju, None, None]
             with suppress(jubilant.CLIError):
                 args = [
                     "destroy-model",
-                    juju_.model,
+                    model_name,
                     "--no-prompt",
                     "--destroy-storage",
                     "--force",
+                    "--timeout",
+                    "600",
                 ]
-                juju_._cli(*args, include_model=False, timeout=10 * 60)
+                juju_.cli(*args, include_model=False)
 
 
 @pytest.fixture(scope="session")
