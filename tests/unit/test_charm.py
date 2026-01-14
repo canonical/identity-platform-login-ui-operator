@@ -1,396 +1,277 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-#
-# Learn more about testing at: https://juju.is/docs/sdk/testing
 
 """Test functions for unit testing Identity Platform Login UI Operator."""
 
-import json
-from typing import Tuple
+from unittest.mock import patch
 
-from charms.identity_platform_login_ui_operator.v0.login_ui_endpoints import LoginUIProviderData
-from ops.model import ActiveStatus, WaitingStatus
-from ops.testing import Harness
-from pytest_mock import MockerFixture
+import ops.testing
+from ops import ActiveStatus, BlockedStatus, WaitingStatus
 
-from constants import PUBLIC_ROUTE_INTEGRATION_NAME, WORKLOAD_RUN_COMMAND
+from constants import COOKIES_KEY, WORKLOAD_CONTAINER_NAME, WORKLOAD_RUN_COMMAND
+from exceptions import PebbleServiceError
 
-CONTAINER_NAME = "login-ui"
-TEST_PORT = "8080"
+from .conftest import create_state
 
 
-def setup_peer_relation(harness: Harness) -> Tuple[int, str]:
-    app_name = "identity-platform-login-ui"
-    relation_id = harness.add_relation("identity-platform-login-ui", app_name)
-    return relation_id, app_name
+class TestPebbleReadyEvent:
+    """Tests for identity-platform-login-ui-pebble-ready event handling."""
+    def test_pebble_ready_can_connect(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+    ) -> None:
+        """Test installation with connection."""
+        state_in = create_state(relations=[peer_relation])
+        container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
+
+        state_out = context.run(context.on.pebble_ready(container), state_in)
+
+        assert state_out.unit_status == ActiveStatus()
+
+    def test_pebble_ready_cannot_connect(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+    ) -> None:
+        """Test installation with connection."""
+        state_in = create_state(can_connect=False, relations=[peer_relation])
+        container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
+
+        state_out = context.run(context.on.pebble_ready(container), state_in)
+
+        assert state_out.unit_status == WaitingStatus("Waiting to connect to Login_UI container")
+
+    def test_pebble_ready_missing_peer_relation(
+        self,
+        context: ops.testing.Context,
+    ) -> None:
+        state_in = create_state()
+        container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
+
+        state_out = context.run(context.on.pebble_ready(container), state_in)
+
+        assert state_out.unit_status == WaitingStatus("Waiting for peer relation")
+
+    def test_pebble_ready_layer_configuration(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+    ) -> None:
+        """Test Pebble Layer after updates."""
+        state_in = create_state(relations=[peer_relation])
+        container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
+
+        state_out = context.run(context.on.pebble_ready(container), state_in)
+
+        container_out = state_out.get_container(WORKLOAD_CONTAINER_NAME)
+        layer = container_out.layers[WORKLOAD_CONTAINER_NAME]
+        service = layer.services[WORKLOAD_CONTAINER_NAME]
+        env = service.environment
+
+        assert service.command == WORKLOAD_RUN_COMMAND
+        assert env["HYDRA_ADMIN_URL"] == ""
+        assert env["KRATOS_PUBLIC_URL"] == ""
+        assert env["LOG_LEVEL"] == "info"
+
+        peer_rel = state_out.get_relations("identity-platform-login-ui")[0]
+
+        assert len(peer_rel.local_app_data[COOKIES_KEY]) == 32
 
 
-def setup_ingress_relation(harness: Harness) -> Tuple[int, str]:
-    """Set up ingress relation."""
-    harness.set_leader(True)
-    relation_id = harness.add_relation(PUBLIC_ROUTE_INTEGRATION_NAME, "traefik")
-    harness.add_relation_unit(relation_id, "traefik/0")
-    scheme, host = "https", "ingress"
-    harness.update_relation_data(
-        relation_id,
-        "traefik",
-        {
-            "external_host": host,
-            "scheme": scheme,
-        },
-    )
+class TestConfigChangedEvent:
+    """Tests for config-changed event handling."""
 
-    breakpoint()
-    return relation_id, f"{scheme}://{host}"
+    def test_config_changed_can_connect(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+    ) -> None:
+        state_in = create_state(relations=[peer_relation])
+        state_out = context.run(context.on.config_changed(), state_in)
+        assert state_out.unit_status == ActiveStatus()
 
+    def test_config_changed_cannot_connect(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+    ) -> None:
+        state_in = create_state(can_connect=False, relations=[peer_relation])
 
-def setup_kratos_relation(harness: Harness) -> int:
-    relation_id = harness.add_relation("kratos-info", "kratos")
-    harness.add_relation_unit(relation_id, "kratos/0")
-    harness.update_relation_data(
-        relation_id,
-        "kratos",
-        {
-            "admin_endpoint": f"http://kratos-admin-url:80/{harness.model.name}-kratos",
-            "public_endpoint": f"http://kratos-public-url:80/{harness.model.name}-kratos",
-            "mfa_enabled": "True",
-            "oidc_webauthn_sequencing_enabled": "False",
-            "feature_flags": "password,totp,webauthn,backup_codes,account_linking",
-        },
-    )
-    return relation_id
+        state_out = context.run(context.on.config_changed(), state_in)
+        assert state_out.unit_status == WaitingStatus("Waiting to connect to Login_UI container")
 
 
-def setup_hydra_relation(harness: Harness) -> int:
-    relation_id = harness.add_relation("hydra-endpoint-info", "hydra")
-    harness.add_relation_unit(relation_id, "hydra/0")
-    harness.update_relation_data(
-        relation_id,
-        "hydra",
-        {
-            "admin_endpoint": f"http://hydra-admin-url:80/{harness.model.name}-hydra",
-            "public_endpoint": f"http://hydra-public-url:80/{harness.model.name}-hydra",
-        },
-    )
-    return relation_id
+class TestKratosRelationEvents:
+    """Tests for kratos-info relation event handling."""
+
+    def test_layer_env_updated_with_kratos_info(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+        kratos_relation: ops.testing.Relation,
+    ) -> None:
+        """Test Pebble Layer when kratos relation data is in place."""
+        state_in = create_state(relations=[peer_relation, kratos_relation])
+        container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
+        state_out = context.run(context.on.pebble_ready(container), state_in)
+
+        container_out = state_out.get_container(WORKLOAD_CONTAINER_NAME)
+        layer = container_out.layers[WORKLOAD_CONTAINER_NAME]
+        env = layer.services[WORKLOAD_CONTAINER_NAME].environment
+
+        kratos_data = kratos_relation.remote_app_data
+
+        assert env["KRATOS_PUBLIC_URL"] == kratos_data["public_endpoint"]
+        assert env["KRATOS_ADMIN_URL"] == kratos_data["admin_endpoint"]
+        assert str(env["MFA_ENABLED"]) == kratos_data["mfa_enabled"]
+        assert (
+            str(env["OIDC_WEBAUTHN_SEQUENCING_ENABLED"])
+            == kratos_data["oidc_webauthn_sequencing_enabled"]
+        )
+        assert env["FEATURE_FLAGS"] == kratos_data["feature_flags"]
 
 
-def setup_loki_relation(harness: Harness) -> None:
-    relation_id = harness.add_relation("logging", "loki-k8s")
-    harness.add_relation_unit(relation_id, "loki-k8s/0")
-    databag = {
-        "promtail_binary_zip_url": json.dumps({
-            "amd64": {
-                "filename": "promtail-static-amd64",
-                "zipsha": "543e333b0184e14015a42c3c9e9e66d2464aaa66eca48b29e185a6a18f67ab6d",
-                "binsha": "17e2e271e65f793a9fbe81eab887b941e9d680abe82d5a0602888c50f5e0cac9",
-                "url": "https://github.com/canonical/loki-k8s-operator/releases/download/promtail-v2.5.0/promtail-static-amd64.gz",
-            }
-        }),
-    }
-    unit_databag = {
-        "endpoint": json.dumps({
-            "url": "http://loki-k8s-0.loki-k8s-endpoints.model0.svc.cluster.local:3100/loki/api/v1/push"
-        })
-    }
-    harness.update_relation_data(
-        relation_id,
-        "loki-k8s/0",
-        unit_databag,
-    )
-    harness.update_relation_data(
-        relation_id,
-        "loki-k8s",
-        databag,
-    )
+class TestHydraRelationEvents:
+    """Tests for hydra-endpoint-info relation event handling."""
+
+    def test_layer_updated_with_hydra_endpoint_info(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+        hydra_relation: ops.testing.Relation,
+    ) -> None:
+        """Test Pebble Layer when relation data is in place."""
+        state_in = create_state(relations=[peer_relation, hydra_relation])
+        container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
+        state_out = context.run(context.on.pebble_ready(container), state_in)
+
+        container_out = state_out.get_container(WORKLOAD_CONTAINER_NAME)
+        layer = container_out.layers[WORKLOAD_CONTAINER_NAME]
+        env = layer.services[WORKLOAD_CONTAINER_NAME].environment
+
+        assert env["HYDRA_ADMIN_URL"] == hydra_relation.remote_app_data["admin_endpoint"]
 
 
-def setup_tempo_relation(harness: Harness) -> int:
-    relation_id = harness.add_relation("tracing", "tempo-k8s")
-    harness.add_relation_unit(relation_id, "tempo-k8s/0")
+class TestTempoRelationEvents:
+    """Tests for tempo relation event handling."""
 
-    trace_databag = {
-        "receivers": '[{"protocol": {"name": "otlp_http", "type": "http"},'
-        '"url": "http://tempo-k8s-0.tempo-k8s-endpoints.namespace.svc.cluster.local:4318"},'
-        '{"protocol": {"name": "otlp_grpc", "type": "grpc"},'
-        '"url": "http://tempo-k8s-0.tempo-k8s-endpoints.namespace.svc.cluster.local:4317"}]',
-    }
-    harness.update_relation_data(
-        relation_id,
-        "tempo-k8s",
-        trace_databag,
-    )
-    return relation_id
+    def test_layer_updated_with_tracing_endpoint_info(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+        tempo_relation: ops.testing.Relation,
+    ) -> None:
+        """Test Pebble Layer when relation data is in place."""
+        state_in = create_state(relations=[peer_relation, tempo_relation])
+        container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
+        state_out = context.run(context.on.pebble_ready(container), state_in)
 
+        container_out = state_out.get_container(WORKLOAD_CONTAINER_NAME)
+        layer = container_out.layers[WORKLOAD_CONTAINER_NAME]
+        env = layer.services[WORKLOAD_CONTAINER_NAME].environment
 
-def test_not_leader(harness: Harness) -> None:
-    """Test with unit not being leader."""
-    harness.set_leader(False)
-
-    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
-
-    assert (
-        "status_set",
-        "waiting",
-        "Waiting to connect to Login_UI container",
-        {"is_app": False},
-    ) in harness._get_backend_calls()
+        assert (
+            env["OTEL_HTTP_ENDPOINT"]
+            == "http://tempo-k8s-0.tempo-k8s-endpoints.namespace.svc.cluster.local:4318"
+        )
+        assert (
+            env["OTEL_GRPC_ENDPOINT"]
+            == "http://tempo-k8s-0.tempo-k8s-endpoints.namespace.svc.cluster.local:4317"
+        )
+        assert env["TRACING_ENABLED"] is True
 
 
-def test_install_can_connect(harness: Harness) -> None:
-    """Test installation with connection."""
-    harness.set_leader(True)
-    harness.set_can_connect(CONTAINER_NAME, True)
-    setup_peer_relation(harness)
-    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
+class TestPublicRouteRelationEvents:
+    """Tests for public-ingress relation event handling."""
 
-    assert harness.charm.unit.status == ActiveStatus()
+    def test_traefik_route_integration(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+        public_route_relation: ops.testing.Relation,
+    ) -> None:
+        """Test integration with Traefik."""
+        state_in = create_state(relations=[peer_relation, public_route_relation])
+        container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
+        state_out = context.run(context.on.pebble_ready(container), state_in)
 
+        assert state_out.unit_status == ActiveStatus()
 
-def test_install_can_not_connect(harness: Harness) -> None:
-    """Test installation with connection."""
-    harness.set_leader(True)
-    harness.set_can_connect(CONTAINER_NAME, False)
-    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
+    def test_public_route_broken(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+        public_route_relation: ops.testing.Relation,
+    ) -> None:
+        state_in = create_state(relations=[peer_relation, public_route_relation])
+        state_out = context.run(context.on.relation_broken(public_route_relation), state_in)
+        assert state_out.unit_status == ActiveStatus()
 
-    assert harness.charm.unit.status == WaitingStatus("Waiting to connect to Login_UI container")
-
-
-def test_missing_peer_relation_on_pebble_ready(harness: Harness) -> None:
-    harness.set_leader(True)
-    harness.set_can_connect(CONTAINER_NAME, True)
-    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
-
-    assert harness.charm.unit.status == WaitingStatus("Waiting for peer relation")
-
-
-def test_layer_updated_without_any_endpoint_info(harness: Harness) -> None:
-    """Test Pebble Layer after updates."""
-    harness.set_leader(True)
-    harness.set_can_connect(CONTAINER_NAME, True)
-    setup_peer_relation(harness)
-    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
-
-    expected_layer = {
-        "summary": "login_ui layer",
-        "description": "pebble config layer for identity platform login ui",
-        "services": {
-            CONTAINER_NAME: {
-                "override": "replace",
-                "summary": "identity platform login ui",
-                "command": WORKLOAD_RUN_COMMAND,
-                "startup": "disabled",
-                "environment": {
-                    "HYDRA_ADMIN_URL": "",
-                    "KRATOS_PUBLIC_URL": "",
-                    "KRATOS_ADMIN_URL": "",
-                    "PORT": TEST_PORT,
-                    "BASE_URL": None,
-                    "COOKIES_ENCRYPTION_KEY": harness.charm._cookie_encryption_key,
-                    "TRACING_ENABLED": False,
-                    "AUTHORIZATION_ENABLED": False,
-                    "SUPPORT_EMAIL": None,
-                    "LOG_LEVEL": harness.charm._log_level,
-                    "DEBUG": False,
-                },
-            }
-        },
-        "checks": {
-            "login-ui-alive": {
-                "override": "replace",
-                "http": {"url": f"http://localhost:{TEST_PORT}/api/v0/status"},
-            },
-        },
-    }
-
-    assert harness.charm._login_ui_layer.to_dict() == expected_layer
-    assert len(harness.charm._cookie_encryption_key) == 32
+    def test_public_route_changed(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+        public_route_relation: ops.testing.Relation,
+    ) -> None:
+        state_in = create_state(relations=[peer_relation, public_route_relation])
+        state_out = context.run(context.on.relation_changed(public_route_relation), state_in)
+        assert state_out.unit_status == ActiveStatus()
 
 
-def test_layer_updated_with_tracing_endpoint_info(harness: Harness) -> None:
-    """Test Pebble Layer when relation data is in place."""
-    harness.set_leader(True)
-    harness.set_can_connect(CONTAINER_NAME, True)
-    setup_peer_relation(harness)
-    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
-    setup_tempo_relation(harness)
+class TestHolisticHandler:
+    """Tests for holistic event handling."""
+    def test_all_ready_non_leader(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+    ) -> None:
+        """Test with unit not being leader."""
+        state_in = create_state(leader=False, relations=[peer_relation])
 
-    pebble_env = harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"]
+        container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
+        state_out = context.run(context.on.pebble_ready(container), state_in)
 
-    assert (
-        pebble_env["OTEL_HTTP_ENDPOINT"]
-        == "http://tempo-k8s-0.tempo-k8s-endpoints.namespace.svc.cluster.local:4318"
-    )
-    assert (
-        pebble_env["OTEL_GRPC_ENDPOINT"]
-        == "http://tempo-k8s-0.tempo-k8s-endpoints.namespace.svc.cluster.local:4317"
-    )
-    assert pebble_env["TRACING_ENABLED"]
+        assert state_out.unit_status == ActiveStatus()
 
-
-def test_layer_env_updated_with_kratos_info(harness: Harness) -> None:
-    """Test Pebble Layer when kratos relation data is in place."""
-    harness.set_leader(True)
-    harness.set_can_connect(CONTAINER_NAME, True)
-    setup_peer_relation(harness)
-    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
-    kratos_relation_id = setup_kratos_relation(harness)
-
-    assert (
-        harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
-            "KRATOS_PUBLIC_URL"
-        ]
-        == harness.get_relation_data(kratos_relation_id, "kratos")["public_endpoint"]
-    )
-
-    assert (
-        harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
-            "KRATOS_ADMIN_URL"
-        ]
-        == harness.get_relation_data(kratos_relation_id, "kratos")["admin_endpoint"]
-    )
-    assert (
-        str(
-            harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
-                "MFA_ENABLED"
+    def test_all_relations_established(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+        kratos_relation: ops.testing.Relation,
+        hydra_relation: ops.testing.Relation,
+        tempo_relation: ops.testing.Relation,
+        public_route_relation: ops.testing.Relation,
+    ) -> None:
+        """Test installation with all relations established."""
+        state_in = create_state(
+            relations=[
+                peer_relation,
+                kratos_relation,
+                hydra_relation,
+                tempo_relation,
+                public_route_relation,
             ]
         )
-        == harness.get_relation_data(kratos_relation_id, "kratos")["mfa_enabled"]
-    )
-    assert (
-        str(
-            harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
-                "OIDC_WEBAUTHN_SEQUENCING_ENABLED"
-            ]
-        )
-        == harness.get_relation_data(kratos_relation_id, "kratos")[
-            "oidc_webauthn_sequencing_enabled"
-        ]
-    )
+        container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
 
-    assert (
-        harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
-            "FEATURE_FLAGS"
-        ]
-        == harness.get_relation_data(kratos_relation_id, "kratos")["feature_flags"]
-    )
+        state_out = context.run(context.on.pebble_ready(container), state_in)
+
+        assert state_out.unit_status == ActiveStatus()
 
 
-def test_layer_updated_with_hydra_endpoint_info(harness: Harness) -> None:
-    """Test Pebble Layer when relation data is in place."""
-    harness.set_leader(True)
-    harness.set_can_connect(CONTAINER_NAME, True)
-    setup_peer_relation(harness)
-    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
-    hydra_relation_id = setup_hydra_relation(harness)
+class TestStatusManagement:
+    """Tests for status management and error handling."""
 
-    assert (
-        harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
-            "HYDRA_ADMIN_URL"
-        ]
-        == harness.get_relation_data(hydra_relation_id, "hydra")["admin_endpoint"]
-    )
+    def test_pebble_service_error_handling(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+    ) -> None:
+        state_in = create_state(relations=[peer_relation])
+        container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
 
+        with patch("services.PebbleService.plan", side_effect=PebbleServiceError("Plan failed")):
+            state_out = context.run(context.on.pebble_ready(container), state_in)
 
-# TODO @shipperizer evaluate if this test brings anything to the plate given it's a
-# composite of the 2 tests above
-def test_layer_updated_with_endpoint_info(harness: Harness) -> None:
-    """Test Pebble Layer when relation data is in place."""
-    harness.set_leader(True)
-    harness.set_can_connect(CONTAINER_NAME, True)
-    setup_peer_relation(harness)
-    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
-    hydra_relation_id = setup_hydra_relation(harness)
-    kratos_relation_id = setup_kratos_relation(harness)
-
-    assert (
-        harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
-            "KRATOS_PUBLIC_URL"
-        ]
-        == harness.get_relation_data(kratos_relation_id, "kratos")["public_endpoint"]
-    )
-    assert (
-        harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
-            "HYDRA_ADMIN_URL"
-        ]
-        == harness.get_relation_data(hydra_relation_id, "hydra")["admin_endpoint"]
-    )
-
-
-def test_layer_updated_with_ingress_ready(harness: Harness) -> None:
-    harness.set_leader(True)
-    harness.set_can_connect(CONTAINER_NAME, True)
-    setup_peer_relation(harness)
-    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
-    _, url = setup_ingress_relation(harness)
-
-    assert (
-        harness.charm._login_ui_layer.to_dict()["services"][CONTAINER_NAME]["environment"][
-            "BASE_URL"
-        ]
-        == url
-    )
-
-
-def test_ui_endpoint_info(harness: Harness, mocker: MockerFixture) -> None:
-    mocked_service_patcher = mocker.patch(
-        "charm.LoginUIEndpointsProvider.send_endpoints_relation_data"
-    )
-    harness.set_leader(True)
-    harness.set_can_connect(CONTAINER_NAME, True)
-    _, url = setup_ingress_relation(harness)
-    harness.charm.on.login_ui_pebble_ready.emit(CONTAINER_NAME)
-
-    relation_id = harness.add_relation("ui-endpoint-info", "hydra")
-    harness.add_relation_unit(relation_id, "hydra/0")
-
-    mocked_service_patcher.assert_called_with(
-        LoginUIProviderData(
-            consent_url=f"{url}/ui/consent",
-            error_url=f"{url}/ui/error",
-            login_url=f"{url}/ui/login",
-            oidc_error_url=f"{url}/ui/oidc_error",
-            device_verification_url=f"{url}/ui/device_code",
-            post_device_done_url=f"{url}/ui/device_complete",
-            recovery_url=f"{url}/ui/reset_email",
-            settings_url=f"{url}/ui/reset_password",
-            webauthn_settings_url=f"{url}/ui/setup_passkey",
-            account_linking_settings_url=f"{url}/ui/manage_connected_accounts",
-        )
-    )
-
-
-def test_ui_endpoint_info_relation_databag(harness: Harness) -> None:
-    harness.set_can_connect(CONTAINER_NAME, True)
-    _, url = setup_ingress_relation(harness)
-
-    relation_id = harness.add_relation("ui-endpoint-info", "requirer")
-    harness.add_relation_unit(relation_id, "requirer/0")
-
-    expected_data = {
-        "consent_url": f"{url}/ui/consent",
-        "error_url": f"{url}/ui/error",
-        "login_url": f"{url}/ui/login",
-        "oidc_error_url": f"{url}/ui/oidc_error",
-        "device_verification_url": f"{url}/ui/device_code",
-        "post_device_done_url": f"{url}/ui/device_complete",
-        "recovery_url": f"{url}/ui/reset_email",
-        "settings_url": f"{url}/ui/reset_password",
-        "webauthn_settings_url": f"{url}/ui/setup_passkey",
-        "account_linking_settings_url": f"{url}/ui/manage_connected_accounts",
-    }
-
-    relation_data = harness.get_relation_data(relation_id, harness.model.app.name)
-
-    assert relation_data == expected_data
-
-
-def test_on_pebble_ready_with_loki(harness: Harness) -> None:
-    harness.set_leader(True)
-    harness.set_can_connect(CONTAINER_NAME, True)
-    setup_peer_relation(harness)
-    container = harness.model.unit.get_container(CONTAINER_NAME)
-    harness.charm.on.login_ui_pebble_ready.emit(container)
-    setup_loki_relation(harness)
-
-    assert harness.model.unit.status == ActiveStatus()
+        assert state_out.unit_status == BlockedStatus("Failed to replan, please consult the logs")
