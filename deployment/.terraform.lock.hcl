@@ -2,19 +2,19 @@
 # Manual edits may be lost in future updates.
 
 provider "registry.terraform.io/juju/juju" {
-  version     = "1.1.1"
-  constraints = "1.1.1"
+  version     = "1.2.0"
+  constraints = "1.2.0"
   hashes = [
-    "h1:5iP4qlyaxoJopcS5m4ltgBACghqwM57HpDC+T7ssiV0=",
-    "h1:HUz3FRKIsLA+AAygQ0V2f9Cb/OXrwOOnRHPGSzaIT3U=",
-    "h1:U3JkIUr2wabeLVfvJtul08F8HGHSOfYJqrcyLCilJOg=",
-    "h1:hdws1PKwrvRuPaWCmRDFEgKOHJwBaqFj//ciRCLO/Hk=",
-    "h1:r5C+wa4JHIDLX4uZ3XW+J6arhF4UKD5NNX5GIiazWKc=",
-    "zh:3d07c0ff92cc7148b2afa34fd3e820486165b9a17b9220e499ebe142128fee36",
-    "zh:55a1a865d2449f9a9dca59d83415e8317f6015f282d3da079d777d225bfad813",
-    "zh:57df44a860b7f2ddb6b67b3e5782a4bc05780ab26003d97f6e263525a8f1af3f",
+    "h1:36bY/Tudv8v15l2iDec7phWU3symQmbQssMhkemrjt8=",
+    "h1:4sWjT8rUAe42w9UTEPQ7/Kx8ejYmanBQnvTv9yR0Hks=",
+    "h1:I7AhIdiR6es/x+i0phGDM4dve7ThL46y9WwQnxFOrnE=",
+    "h1:KeP3GUD4U3lN3957HgL86zYE3w3BexF+QOtERs+wggA=",
+    "h1:t+AHrlOHouV2q9YKdYkfZ1REzo9NQmLJIY3OgDFQIt8=",
+    "zh:36b2109cee754e9c77e55d24bde56058daa136cd88a5dbd0a8e63a2825e30fd3",
     "zh:753ad16d007180a77a147bd377de2fb334f409123f6fee36d4c50c7fe8b76a29",
-    "zh:83c5c076c9164e00380a06f228e32f53efa29ed71322bdd9e1becb92a8a7a843",
-    "zh:f61fc46552ba066344402470f45a5ad956eca49becc3b549272bee37313ec334",
+    "zh:c25b6ab243e8a9de10435e3d6af6ee321a42b7cd159c347f4991c84f36e01089",
+    "zh:d58b6343b4bfaaf87564be8af1e9caa423a76f4abe9ad0870e09c74d87961b7f",
+    "zh:e4fad2f8785990199788f589b025e957258174057b0fe40c2f1b8cddaddaf411",
+    "zh:edc8935445066529749f7037934ffc7a26cc3047f10dd0ddb949df56bb202506",
   ]
 }
