@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.1](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.1.0...v2.1.1) (2026-01-27)
+
+
+### Bug Fixes
+
+* check for leadership ([0ffc40d](https://github.com/canonical/identity-platform-login-ui-operator/commit/0ffc40df9c2f22f6bf7e0fd7fa627517757f61c8))
+* remove deferred events ([0e6f62d](https://github.com/canonical/identity-platform-login-ui-operator/commit/0e6f62db8871031f82c4da206aaf7922a21daa86))
+
 ## [2.1.0](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.0.1...v2.1.0) (2026-01-09)
 
 
