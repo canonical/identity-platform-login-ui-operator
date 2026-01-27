@@ -5,7 +5,7 @@ on:
   push:
     tags:
       - "v**"
-      - "track**"  
+      - "track**"
 
   workflow_dispatch:
     inputs:
@@ -21,7 +21,7 @@ on:
         type: string
       override-ci:
         description: Override standard release flow
-        required: true  
+        required: true
         type: boolean
 
 jobs:
@@ -39,7 +39,7 @@ jobs:
     concurrency:
       group: ${{ needs.publish.outputs.track }}-${{ needs.publish.outputs.channel }}
       cancel-in-progress: true
-    needs: 
+    needs:
       - publish
     outputs:
       revision: ${{ steps.set-revision.outputs.revision }}
@@ -50,7 +50,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set charm name
-        id: set-charm-name  
+        id: set-charm-name
         run: echo charm_name=$(cat charmcraft.yaml | yq '.name') >> $GITHUB_OUTPUT
       - name: Set revision
         id: set-revision
@@ -64,7 +64,7 @@ jobs:
           CHARM_NAME: ${{ steps.set-charm-name.outputs.charm_name }}
           # only cater for latest track for now
           TRACK: latest
-  
+
   dev-deploy:
     concurrency:
       group: ${{ needs.publish.outputs.track }}-${{ needs.publish.outputs.channel }}
@@ -75,7 +75,7 @@ jobs:
     if: ${{ (needs.publish.outputs.channel == 'latest/edge') }}
     uses: canonical/identity-team/.github/workflows/charm-deploy.yaml@6b27807be4ec7c25045d52ef09ac780d684f65a2 # v1.10.0
     with:
-        model: dev-iam
+        model: blue-iam
         revision: ${{ needs.revision.outputs.revision }}
         channel: ${{ needs.publish.outputs.channel}}
         application: login-ui
@@ -85,7 +85,7 @@ jobs:
       CLIENT_SECRET: ${{ secrets.JIMM_DEV_CLIENT_SECRET }}
       JIMM_URL: ${{ secrets.JIMM_URL }}
       MODEL_UUID: ${{ secrets.DEV_MODEL_UUID }}
-  
+
   stg-deploy:
     concurrency:
       group: ${{ needs.publish.outputs.track }}-${{ needs.publish.outputs.channel }}
@@ -96,7 +96,7 @@ jobs:
     if: ${{ (needs.publish.outputs.channel == 'latest/stable') }}
     uses: canonical/identity-team/.github/workflows/charm-deploy.yaml@6b27807be4ec7c25045d52ef09ac780d684f65a2 # v1.10.0
     with:
-      model: stg-iam
+      model: green-iam
       revision: ${{ needs.revision.outputs.revision }}
       channel: ${{ needs.publish.outputs.channel}}
       application: login-ui
@@ -106,4 +106,3 @@ jobs:
         CLIENT_SECRET: ${{ secrets.JIMM_STG_CLIENT_SECRET }}
         JIMM_URL: ${{ secrets.JIMM_URL }}
         MODEL_UUID: ${{ secrets.STG_MODEL_UUID }}
-      
