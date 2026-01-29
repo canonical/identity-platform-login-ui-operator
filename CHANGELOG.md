@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.2](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.1.1...v2.1.2) (2026-01-29)
+
+
+### Bug Fixes
+
+* Adjust terraform module to remove resource passing ([#401](https://github.com/canonical/identity-platform-login-ui-operator/issues/401)) ([7e94569](https://github.com/canonical/identity-platform-login-ui-operator/commit/7e945693e8329fed156e5e0dc61f2341fcbc2340))
+
 ## [2.1.1](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.1.0...v2.1.1) (2026-01-27)
 
 
