@@ -18,8 +18,8 @@ resource "juju_application" "application" {
   trust       = true
   config      = var.config
   constraints = var.constraints
-  resources   = local.resources
-  units       = var.units
+  # resources   = local.resources
+  units = var.units
 
   charm {
     name     = "identity-platform-login-ui-operator"
