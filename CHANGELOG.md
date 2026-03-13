@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.0](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.1.2...v2.2.0) (2026-03-13)
+
+
+### Features
+
+* add registration and verification endpoints ([f16448e](https://github.com/canonical/identity-platform-login-ui-operator/commit/f16448ee140babffc4f60e180b2b202c68d0ebae))
+* add registration and verification endpoints ([#415](https://github.com/canonical/identity-platform-login-ui-operator/issues/415)) ([f2b063a](https://github.com/canonical/identity-platform-login-ui-operator/commit/f2b063af7602a37c6c8371eadc66e0a41f15e691))
+
 ## [2.1.2](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.1.1...v2.1.2) (2026-01-29)
 
 
