@@ -103,6 +103,7 @@ class PebbleService:
             container["environment"]["OIDC_WEBAUTHN_SEQUENCING_ENABLED"] = (
                 kratos_info.oidc_webauthn_sequencing_enabled
             )
+            container["environment"]["VERIFICATION_ENABLED"] = kratos_info.verification_enabled
 
         if tracing_data.is_ready:
             container["environment"]["OTEL_HTTP_ENDPOINT"] = tracing_data.http_endpoint
