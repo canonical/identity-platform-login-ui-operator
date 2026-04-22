@@ -121,6 +121,7 @@ def kratos_relation() -> ops.testing.Relation:
             "public_endpoint": "http://kratos-public-url:80/testing-kratos",
             "mfa_enabled": "True",
             "oidc_webauthn_sequencing_enabled": "False",
+            "verification_enabled": "True",
             "feature_flags": "password,totp,webauthn,backup_codes,account_linking",
         },
     )

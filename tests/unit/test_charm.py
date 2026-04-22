@@ -125,6 +125,7 @@ class TestKratosRelationEvents:
         assert env["KRATOS_PUBLIC_URL"] == kratos_data["public_endpoint"]
         assert env["KRATOS_ADMIN_URL"] == kratos_data["admin_endpoint"]
         assert str(env["MFA_ENABLED"]) == kratos_data["mfa_enabled"]
+        assert str(env["VERIFICATION_ENABLED"]) == kratos_data["verification_enabled"]
         assert (
             str(env["OIDC_WEBAUTHN_SEQUENCING_ENABLED"])
             == kratos_data["oidc_webauthn_sequencing_enabled"]

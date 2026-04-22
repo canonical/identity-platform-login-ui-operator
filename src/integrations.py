@@ -54,6 +54,7 @@ class KratosInfoData:
     admin_endpoint: str = ""
     mfa_enabled: bool = False
     oidc_webauthn_sequencing_enabled: bool = False
+    verification_enabled: bool = False
     is_ready: bool = False
     feature_flags: Optional[list[str]] = None
 
@@ -73,6 +74,7 @@ class KratosInfoData:
             admin_endpoint=info.get("admin_endpoint"),
             mfa_enabled=info.get("mfa_enabled"),
             oidc_webauthn_sequencing_enabled=info.get("oidc_webauthn_sequencing_enabled"),
+            verification_enabled=info.get("verification_enabled"),
             is_ready=requirer.is_ready(),
             feature_flags=info.get("feature_flags", None),
         )
