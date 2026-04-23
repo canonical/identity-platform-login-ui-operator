@@ -14,14 +14,13 @@ from charms.hydra.v0.hydra_endpoints import (
 )
 from charms.kratos.v0.kratos_info import KratosInfoRelationDataMissingError, KratosInfoRequirer
 from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
+from charms.tenant_service.v0.tenant_service_info import TenantServiceInfoRequirer
 from charms.traefik_k8s.v0.traefik_route import TraefikRouteRequirer
 from jinja2 import Template
 from yarl import URL
 
 from constants import APPLICATION_PORT as PUBLIC_PORT
-from constants import (
-    PUBLIC_ROUTE_INTEGRATION_NAME,
-)
+from constants import PUBLIC_ROUTE_INTEGRATION_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -158,3 +157,27 @@ class PublicRouteData:
     @property
     def secured(self) -> bool:
         return self.url.scheme == "https"
+
+
+@dataclass(frozen=True, slots=True)
+class TenantServiceInfoData:
+    """The data source from the tenant-service-info integration."""
+
+    service_url: str = ""
+    grpc_url: str = ""
+    is_ready: bool = False
+
+    @classmethod
+    def load(cls, requirer: TenantServiceInfoRequirer) -> "TenantServiceInfoData":
+        """Load tenant-service info from the relation."""
+        if not requirer.is_ready():
+            return cls()
+        service_url = requirer.get_service_url() or ""
+        grpc_url = requirer.get_grpc_url() or ""
+
+        is_ready = False
+        if service_url:
+            parsed = URL(service_url)
+            is_ready = parsed.scheme in ("http", "https") and bool(parsed.host)
+
+        return cls(service_url=service_url, grpc_url=grpc_url, is_ready=is_ready)

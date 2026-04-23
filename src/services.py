@@ -13,7 +13,7 @@ from constants import (
     WORKLOAD_RUN_COMMAND,
 )
 from exceptions import PebbleServiceError
-from integrations import HydraEndpointData, KratosInfoData, TracingData
+from integrations import HydraEndpointData, KratosInfoData, TenantServiceInfoData, TracingData
 
 
 class WorkloadService:
@@ -74,6 +74,7 @@ class PebbleService:
         hydra_endpoint: HydraEndpointData,
         kratos_info: KratosInfoData,
         tracing_data: TracingData,
+        tenant_service_info: TenantServiceInfoData | None = None,
     ) -> Layer:
         container = {
             "override": "replace",
@@ -92,6 +93,7 @@ class PebbleService:
                 "LOG_LEVEL": log_level,
                 "SUPPORT_EMAIL": support_email,
                 "DEBUG": log_level == "DEBUG",
+                "IDENTIFIER_FIRST": True,
             },
         }
 
@@ -109,6 +111,10 @@ class PebbleService:
             container["environment"]["OTEL_HTTP_ENDPOINT"] = tracing_data.http_endpoint
             container["environment"]["OTEL_GRPC_ENDPOINT"] = tracing_data.grpc_endpoint
             container["environment"]["TRACING_ENABLED"] = True
+
+        if tenant_service_info and tenant_service_info.is_ready:
+            container["environment"]["TENANTS_SERVICE_URL"] = tenant_service_info.service_url
+            container["environment"]["MULTI_TENANCY_ENABLED"] = True
 
         # Define Pebble layer configuration
         pebble_layer: LayerDict = {

@@ -84,7 +84,9 @@ def create_state(
                     return_code=0,
                     stdout="App Version: 1.42.0",
                 )
-            } if can_connect else {},
+            }
+            if can_connect
+            else {},
         )
 
     return ops.testing.State(
@@ -167,4 +169,17 @@ def public_route_relation() -> ops.testing.Relation:
         endpoint="public-route",
         interface="traefik_route",
         remote_app_name="traefik-k8s",
+    )
+
+
+@pytest.fixture
+def tenant_service_relation() -> ops.testing.Relation:
+    return ops.testing.Relation(
+        endpoint="tenant-service-info",
+        interface="tenant_service_info",
+        remote_app_name="tenant-service",
+        remote_app_data={
+            "service_url": "http://tenant-service:8080",
+            "grpc_url": "grpc://tenant-service:50051",
+        },
     )
