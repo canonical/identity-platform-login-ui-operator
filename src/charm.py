@@ -303,7 +303,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                 post_device_done_url=f"{endpoint}/ui/device_complete",
                 recovery_url=f"{endpoint}/ui/reset_email",
                 registration_url=f"{endpoint}/ui/register",
-                settings_url=f"{endpoint}/ui/reset_password",
+                settings_url=f"{endpoint}/ui/manage_details",
                 webauthn_settings_url=f"{endpoint}/ui/setup_passkey",
                 account_linking_settings_url=f"{endpoint}/ui/manage_connected_accounts",
                 verification_url=f"{endpoint}/ui/verification",
