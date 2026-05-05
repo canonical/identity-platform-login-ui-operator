@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.2.0](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.1.2...v2.2.0) (2026-05-05)
+
+
+### Features
+
+* add registration and verification endpoints ([f16448e](https://github.com/canonical/identity-platform-login-ui-operator/commit/f16448ee140babffc4f60e180b2b202c68d0ebae))
+* add registration and verification endpoints ([#415](https://github.com/canonical/identity-platform-login-ui-operator/issues/415)) ([f2b063a](https://github.com/canonical/identity-platform-login-ui-operator/commit/f2b063af7602a37c6c8371eadc66e0a41f15e691))
+* add verification_enable flag ([ecdefb0](https://github.com/canonical/identity-platform-login-ui-operator/commit/ecdefb0c15156186c3c1fedf5cd73042e14c7a7e))
+
+
+### Bug Fixes
+
+* switch default settings url to `manage_details` ([#443](https://github.com/canonical/identity-platform-login-ui-operator/issues/443)) ([e3352f1](https://github.com/canonical/identity-platform-login-ui-operator/commit/e3352f1811914c71a9a92077e5bbae14704975f7))
+* switch default settings url to manage_details ([8b7b816](https://github.com/canonical/identity-platform-login-ui-operator/commit/8b7b8160cec2f53449bba97ccf01555ff5dd613c))
+* **tests:** pin traefik to latest/stable ([b2e99da](https://github.com/canonical/identity-platform-login-ui-operator/commit/b2e99da87527735d94c3fe6eb7e0e5f68e8046b2))
+* **tests:** pin traefik to latest/stable ([#447](https://github.com/canonical/identity-platform-login-ui-operator/issues/447)) ([5d32aa6](https://github.com/canonical/identity-platform-login-ui-operator/commit/5d32aa69c2651ff5db1e136d2e7c933a7da9954c))
+* update OCI-image resource ([#404](https://github.com/canonical/identity-platform-login-ui-operator/issues/404)) ([9bbd8b3](https://github.com/canonical/identity-platform-login-ui-operator/commit/9bbd8b31680b9b625f711e0947407c93037ca1de))
+* update oci-image to ghcr.io/canonical/identity-platform-login-ui:v0.26.0 ([c628b5b](https://github.com/canonical/identity-platform-login-ui-operator/commit/c628b5bd1109968e9b3fcc8dcc63d166b967371b))
+
 ## [2.1.2](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.1.1...v2.1.2) (2026-01-29)
 
 
