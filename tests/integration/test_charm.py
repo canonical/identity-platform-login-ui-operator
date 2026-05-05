@@ -42,7 +42,7 @@ def test_build_and_deploy(juju: jubilant.Juju, local_charm: Path) -> None:
     juju.deploy(
         TRAEFIK_CHARM,
         app=TRAEFIK_PUBLIC_APP,
-        channel="latest/edge",  # using edge to take advantage of the raw args in traefik route
+        channel="latest/stable",
         config={"external_hostname": PUBLIC_INGRESS_DOMAIN},
         trust=True,
     )
