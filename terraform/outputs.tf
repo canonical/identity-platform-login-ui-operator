@@ -15,6 +15,7 @@ output "requires" {
     logging             = "logging"
     tracing             = "tracing"
     receive-ca-cert     = "receive-ca-cert"
+    tenant-service-info = "tenant-service-info"
   }
 }
 

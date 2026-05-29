@@ -89,7 +89,64 @@
             }
           ]
         }
-      },                     
+      },
+      "juju-{{ identifier }}-public-api-router-api-tenants-resolve": {
+        "entryPoints": ["web"],
+        "rule": "Path(`/api/v0/tenants/resolve`)",
+        "service": "juju-{{ identifier }}-public-api-service"
+      },
+      "juju-{{ identifier }}-public-api-router-api-tenants-resolve-tls": {
+        "entryPoints": ["websecure"],
+        "rule": "Path(`/api/v0/tenants/resolve`)",
+        "service": "juju-{{ identifier }}-public-api-service",
+        "tls": {
+          "domains": [
+            {
+              "main": "{{ external_host }}",
+              "sans": ["*.{{ external_host }}"]
+
+            }
+          ]
+        }
+      },
+      "juju-{{ identifier }}-public-api-router-api-tenants": {
+        "entryPoints": ["web"],
+        "rule": "Path(`/api/v0/tenants`)",
+        "service": "juju-{{ identifier }}-public-api-service"
+      },
+      "juju-{{ identifier }}-public-api-router-api-tenants-tls": {
+        "entryPoints": ["websecure"],
+        "rule": "Path(`/api/v0/tenants`)",
+        "service": "juju-{{ identifier }}-public-api-service",
+        "tls": {
+          "domains": [
+            {
+              "main": "{{ external_host }}",
+              "sans": ["*.{{ external_host }}"]
+
+            }
+          ]
+        }
+      },
+      "juju-{{ identifier }}-public-api-router-api-auth-tenant": {
+        "entryPoints": ["web"],
+        "rule": "Path(`/api/v0/auth/tenant`)",
+        "service": "juju-{{ identifier }}-public-api-service"
+      },
+      "juju-{{ identifier }}-public-api-router-api-auth-tenant-tls": {
+        "entryPoints": ["websecure"],
+        "rule": "Path(`/api/v0/auth/tenant`)",
+        "service": "juju-{{ identifier }}-public-api-service",
+        "tls": {
+          "domains": [
+            {
+              "main": "{{ external_host }}",
+              "sans": ["*.{{ external_host }}"]
+
+            }
+          ]
+        }
+      },
       "juju-{{ identifier }}-public-api-router-ui": {
         "entryPoints": ["web"],
         "rule": "PathPrefix(`/ui`)",

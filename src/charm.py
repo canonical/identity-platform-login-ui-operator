@@ -28,6 +28,7 @@ from charms.observability_libs.v0.kubernetes_compute_resources_patch import (
 )
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
+from charms.tenant_service.v0.tenant_service_info import TenantServiceInfoRequirer
 from charms.traefik_k8s.v0.traefik_route import TraefikRouteRequirer
 from ops import (
     ActiveStatus,
@@ -57,11 +58,18 @@ from constants import (
     PEER_INTEGRATION_NAME,
     PROMETHEUS_INTEGRATION_NAME,
     PUBLIC_ROUTE_INTEGRATION_NAME,
+    TENANT_SERVICE_INFO_INTEGRATION_NAME,
     TRACING_INTEGRATION_NAME,
     WORKLOAD_CONTAINER_NAME,
 )
 from exceptions import PebbleServiceError
-from integrations import HydraEndpointData, KratosInfoData, PublicRouteData, TracingData
+from integrations import (
+    HydraEndpointData,
+    KratosInfoData,
+    PublicRouteData,
+    TenantServiceInfoData,
+    TracingData,
+)
 from services import PebbleService, WorkloadService
 from utils import normalise_url
 
@@ -92,6 +100,10 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self.hydra_endpoints = HydraEndpointsRequirer(self, relation_name=HYDRA_INTEGRATION_NAME)
         # Login UI
         self.endpoints_provider = LoginUIEndpointsProvider(self)
+        # Tenant service
+        self._tenant_service_info = TenantServiceInfoRequirer(
+            self, relation_name=TENANT_SERVICE_INFO_INTEGRATION_NAME
+        )
 
         # Tracing
         self.tracing = TracingEndpointRequirer(
@@ -137,6 +149,14 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
         self.framework.observe(
             self.on[KRATOS_INTEGRATION_NAME].relation_changed, self._holistic_handler
+        )
+        self.framework.observe(
+            self.on[TENANT_SERVICE_INFO_INTEGRATION_NAME].relation_changed,
+            self._holistic_handler,
+        )
+        self.framework.observe(
+            self.on[TENANT_SERVICE_INFO_INTEGRATION_NAME].relation_broken,
+            self._holistic_handler,
         )
         self.framework.observe(
             self.endpoints_provider.on.ready, self._update_login_ui_endpoint_relation_data
@@ -205,6 +225,14 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         if self.unit.is_leader() and not self._cookie_encryption_key:
             self._peers.data[self.app][COOKIES_KEY] = secrets.token_hex(16)
 
+        if (
+            self.unit.is_leader()
+            and self.public_route.is_ready()
+            and self.public_route._relation.app is not None
+        ):
+            public_route_config = PublicRouteData.load(self.public_route).config
+            self.public_route.submit_to_traefik(public_route_config)
+
         self.cert_transfer.push_ca_certs()
 
         logger.info("Pebble plan updated with new configuration, replanning")
@@ -225,10 +253,6 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
         if not self.public_route.is_ready():
             return
-
-        if self.unit.is_leader():
-            public_route_config = PublicRouteData.load(self.public_route).config
-            self.public_route.submit_to_traefik(public_route_config)
 
         self._holistic_handler(event)
         self._update_login_ui_endpoint_relation_data(event)
@@ -283,6 +307,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             HydraEndpointData.load(self.hydra_endpoints),
             KratosInfoData.load(self._kratos_info),
             TracingData.load(self.tracing),
+            TenantServiceInfoData.load(self._tenant_service_info),
         )
 
     def _resource_reqs_from_config(self) -> ResourceRequirements:

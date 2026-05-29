@@ -16,6 +16,7 @@ from .conftest import create_state
 
 class TestPebbleReadyEvent:
     """Tests for identity-platform-login-ui-pebble-ready event handling."""
+
     def test_pebble_ready_can_connect(
         self,
         context: ops.testing.Context,
@@ -154,6 +155,57 @@ class TestHydraRelationEvents:
         assert env["HYDRA_ADMIN_URL"] == hydra_relation.remote_app_data["admin_endpoint"]
 
 
+class TestTenantServiceRelationEvents:
+    """Tests for tenant-service-info relation event handling."""
+
+    def test_layer_env_updated_with_tenant_service_info(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+        tenant_service_relation: ops.testing.Relation,
+    ) -> None:
+        """Test Pebble Layer includes multi-tenancy env vars when tenant-service relation is present."""
+        state_in = create_state(relations=[peer_relation, tenant_service_relation])
+        container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
+        state_out = context.run(context.on.pebble_ready(container), state_in)
+
+        container_out = state_out.get_container(WORKLOAD_CONTAINER_NAME)
+        layer = container_out.layers[WORKLOAD_CONTAINER_NAME]
+        env = layer.services[WORKLOAD_CONTAINER_NAME].environment
+
+        assert env["TENANTS_SERVICE_URL"] == "http://tenant-service:8080"
+        assert env["MULTI_TENANCY_ENABLED"] is True
+
+    def test_layer_env_without_tenant_service_info(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+    ) -> None:
+        """Test Pebble Layer does not include multi-tenancy env vars without the relation."""
+        state_in = create_state(relations=[peer_relation])
+        container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
+        state_out = context.run(context.on.pebble_ready(container), state_in)
+
+        container_out = state_out.get_container(WORKLOAD_CONTAINER_NAME)
+        layer = container_out.layers[WORKLOAD_CONTAINER_NAME]
+        env = layer.services[WORKLOAD_CONTAINER_NAME].environment
+
+        assert "TENANTS_SERVICE_URL" not in env
+        assert "MULTI_TENANCY_ENABLED" not in env
+
+    def test_tenant_service_relation_broken(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+        tenant_service_relation: ops.testing.Relation,
+    ) -> None:
+        """Test that relation broken removes multi-tenancy env vars."""
+        state_in = create_state(relations=[peer_relation, tenant_service_relation])
+        state_out = context.run(context.on.relation_broken(tenant_service_relation), state_in)
+
+        assert state_out.unit_status == ActiveStatus()
+
+
 class TestTempoRelationEvents:
     """Tests for tempo relation event handling."""
 
@@ -222,6 +274,7 @@ class TestPublicRouteRelationEvents:
 
 class TestHolisticHandler:
     """Tests for holistic event handling."""
+
     def test_all_ready_non_leader(
         self,
         context: ops.testing.Context,
