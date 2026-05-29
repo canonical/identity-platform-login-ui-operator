@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.1](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.2.0...v2.2.1) (2026-05-29)
+
+
+### Bug Fixes
+
+* enable multitenancy ([34a04c6](https://github.com/canonical/identity-platform-login-ui-operator/commit/34a04c6ef5e54376f6796fdaf18e11cdc78233c5))
+
 ## [2.2.0](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.1.2...v2.2.0) (2026-05-05)
 
 
