@@ -10,6 +10,7 @@ import logging
 import secrets
 from typing import Optional
 
+from charmlibs.interfaces.istio_ingress_route import IstioIngressRouteRequirer
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.hydra.v0.hydra_endpoints import (
     HydraEndpointsRequirer,
@@ -29,7 +30,6 @@ from charms.observability_libs.v0.kubernetes_compute_resources_patch import (
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
 from charms.tenant_service.v0.tenant_service_info import TenantServiceInfoRequirer
-from charms.traefik_k8s.v0.traefik_route import TraefikRouteRequirer
 from ops import (
     ActiveStatus,
     BlockedStatus,
@@ -38,7 +38,6 @@ from ops import (
     HookEvent,
     MaintenanceStatus,
     Relation,
-    RelationBrokenEvent,
     RelationEvent,
     WaitingStatus,
     WorkloadEvent,
@@ -71,7 +70,6 @@ from integrations import (
     TracingData,
 )
 from services import PebbleService, WorkloadService
-from utils import normalise_url
 
 logger = logging.getLogger(__name__)
 
@@ -86,12 +84,10 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         self._workload_service = WorkloadService(self.unit)
         self._pebble_service = PebbleService(self.unit)
 
-        # public route via raw traefik routing configuration
-        self.public_route = TraefikRouteRequirer(
+        # public route via istio ingress routing configuration
+        self.public_route = IstioIngressRouteRequirer(
             self,
-            self.model.get_relation(PUBLIC_ROUTE_INTEGRATION_NAME),
-            PUBLIC_ROUTE_INTEGRATION_NAME,
-            raw=True,
+            relation_name=PUBLIC_ROUTE_INTEGRATION_NAME,
         )
 
         # Kratos
@@ -178,16 +174,8 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
         # public route
         self.framework.observe(
-            self.on[PUBLIC_ROUTE_INTEGRATION_NAME].relation_joined,
-            self._on_public_route_changed,
-        )
-        self.framework.observe(
-            self.on[PUBLIC_ROUTE_INTEGRATION_NAME].relation_changed,
-            self._on_public_route_changed,
-        )
-        self.framework.observe(
-            self.on[PUBLIC_ROUTE_INTEGRATION_NAME].relation_broken,
-            self._on_public_route_broken,
+            self.public_route.on.ready,
+            self._on_public_route_ready,
         )
 
         # resource patching
@@ -228,10 +216,9 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         if (
             self.unit.is_leader()
             and self.public_route.is_ready()
-            and self.public_route._relation.app is not None
         ):
             public_route_config = PublicRouteData.load(self.public_route).config
-            self.public_route.submit_to_traefik(public_route_config)
+            self.public_route.submit_config(public_route_config)
 
         self.cert_transfer.push_ca_certs()
 
@@ -245,25 +232,10 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
         self.unit.status = ActiveStatus()
 
-    def _on_public_route_changed(self, event: RelationEvent) -> None:
+    def _on_public_route_ready(self, event: RelationEvent) -> None:
         self.unit.status = MaintenanceStatus("Configuring resources")
-
-        # needed due to how traefik_route lib is handling the event
-        self.public_route._relation = event.relation
-
-        if not self.public_route.is_ready():
-            return
-
         self._holistic_handler(event)
         self._update_login_ui_endpoint_relation_data(event)
-
-    def _on_public_route_broken(self, event: RelationBrokenEvent) -> None:
-        self.unit.status = MaintenanceStatus("Configuring resources")
-
-        # needed due to how traefik_route lib is handling the event
-        self.public_route._relation = event.relation
-
-        self._holistic_handler(event)
 
     def _on_resource_patch_failed(self, event: K8sResourcePatchFailedEvent) -> None:
         logger.error(f"Failed to patch resource constraints: {event.message}")
@@ -271,12 +243,12 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
     @property
     def _peers(self) -> Optional[Relation]:
-        """Fetch the peer relation."""
+        """The peer relation."""
         return self.model.get_relation(PEER_INTEGRATION_NAME)
 
     @property
     def _cookie_encryption_key(self) -> Optional[str]:
-        """Retrieve cookie encryption key from the peer data bucket."""
+        """The cookie encryption key from the peer data bucket."""
         if not self._peers:
             return None
         return self._peers.data[self.app].get(COOKIES_KEY, None)
@@ -291,11 +263,12 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
     @property
     def _domain_url(self) -> Optional[str]:
-        return (
-            normalise_url(str(PublicRouteData.load(self.public_route).url))
-            if self.public_route.is_ready()
-            else None
-        )
+        if not self.public_route.is_ready():
+            return None
+        data = PublicRouteData.load(self.public_route)
+        if not data.url.host:
+            return None
+        return str(data.url)
 
     @property
     def _login_ui_layer(self) -> Layer:

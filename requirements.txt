@@ -7,4 +7,4 @@ pydantic~=2.13.1
 tenacity~=9.1.2
 yarl
 dacite
-jinja2
+charmlibs-interfaces-istio-ingress-route==1.0.2
