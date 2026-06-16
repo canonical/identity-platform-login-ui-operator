@@ -238,13 +238,13 @@ class TestTempoRelationEvents:
 class TestPublicRouteRelationEvents:
     """Tests for public-ingress relation event handling."""
 
-    def test_traefik_route_integration(
+    def test_istio_route_integration(
         self,
         context: ops.testing.Context,
         peer_relation: ops.testing.PeerRelation,
         public_route_relation: ops.testing.Relation,
     ) -> None:
-        """Test integration with Traefik."""
+        """Test integration with Istio ingress."""
         state_in = create_state(relations=[peer_relation, public_route_relation])
         container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
         state_out = context.run(context.on.pebble_ready(container), state_in)
@@ -270,6 +270,147 @@ class TestPublicRouteRelationEvents:
         state_in = create_state(relations=[peer_relation, public_route_relation])
         state_out = context.run(context.on.relation_changed(public_route_relation), state_in)
         assert state_out.unit_status == ActiveStatus()
+
+    def test_domain_url_is_http_when_tls_disabled(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+        public_route_relation: ops.testing.Relation,
+    ) -> None:
+        """Test that _domain_url uses HTTP when tls_enabled is False."""
+        state_in = create_state(relations=[peer_relation, public_route_relation])
+        container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
+
+        state_out = context.run(context.on.pebble_ready(container), state_in)
+
+        container_out = state_out.get_container(WORKLOAD_CONTAINER_NAME)
+        env = container_out.layers[WORKLOAD_CONTAINER_NAME].services[WORKLOAD_CONTAINER_NAME].environment
+        assert env["BASE_URL"] == "http://login.example.com"
+
+    def test_domain_url_is_https_when_tls_enabled(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+        public_route_relation_tls: ops.testing.Relation,
+    ) -> None:
+        """Test that _domain_url uses HTTPS when tls_enabled is True."""
+        state_in = create_state(relations=[peer_relation, public_route_relation_tls])
+        container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
+
+        state_out = context.run(context.on.pebble_ready(container), state_in)
+
+        container_out = state_out.get_container(WORKLOAD_CONTAINER_NAME)
+        env = container_out.layers[WORKLOAD_CONTAINER_NAME].services[WORKLOAD_CONTAINER_NAME].environment
+        assert env["BASE_URL"] == "https://login.example.com"
+
+    def test_domain_url_is_none_when_no_external_host(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+        public_route_relation_no_host: ops.testing.Relation,
+    ) -> None:
+        """Test that _domain_url is None when external_host is empty."""
+        state_in = create_state(relations=[peer_relation, public_route_relation_no_host])
+        container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
+
+        state_out = context.run(context.on.pebble_ready(container), state_in)
+
+        container_out = state_out.get_container(WORKLOAD_CONTAINER_NAME)
+        env = container_out.layers[WORKLOAD_CONTAINER_NAME].services[WORKLOAD_CONTAINER_NAME].environment
+        assert env["BASE_URL"] is None
+
+    def test_submit_config_called_with_all_routes(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+        public_route_relation: ops.testing.Relation,
+    ) -> None:
+        """Test that submit_config is called with 2 HTTPRoutes covering all paths."""
+        from charmlibs.interfaces.istio_ingress_route import IstioIngressRouteConfig
+
+        submitted_configs = []
+
+        def capture_submit(config: IstioIngressRouteConfig) -> None:
+            submitted_configs.append(config)
+
+        state_in = create_state(relations=[peer_relation, public_route_relation])
+
+        with patch(
+            "charmlibs.interfaces.istio_ingress_route.IstioIngressRouteRequirer.submit_config",
+            side_effect=capture_submit,
+        ):
+            context.run(context.on.relation_changed(public_route_relation), state_in)
+
+        assert len(submitted_configs) == 1
+        config = submitted_configs[0]
+        assert isinstance(config, IstioIngressRouteConfig)
+        assert {r.name for r in config.http_routes} == {"self-service", "api-and-ui"}
+
+        api_and_ui = next(r for r in config.http_routes if r.name == "api-and-ui")
+        matched_paths = {m.path.value for m in api_and_ui.matches if m.path}
+        assert matched_paths == {
+            "/api/device",
+            "/api/consent",
+            "/api/v0/app-config",
+            "/api/v0/tenants/resolve",
+            "/api/v0/tenants",
+            "/api/v0/auth/tenant",
+            "/ui",
+        }
+
+    def test_submit_config_uses_port_443_when_tls_enabled(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+        public_route_relation_tls: ops.testing.Relation,
+    ) -> None:
+        """Test that submit_config uses port 443 for the listener when TLS is enabled."""
+        from charmlibs.interfaces.istio_ingress_route import IstioIngressRouteConfig
+
+        submitted_configs = []
+
+        def capture_submit(config: IstioIngressRouteConfig) -> None:
+            submitted_configs.append(config)
+
+        state_in = create_state(relations=[peer_relation, public_route_relation_tls])
+
+        with patch(
+            "charmlibs.interfaces.istio_ingress_route.IstioIngressRouteRequirer.submit_config",
+            side_effect=capture_submit,
+        ):
+            context.run(context.on.relation_changed(public_route_relation_tls), state_in)
+
+        assert len(submitted_configs) == 1
+        config = submitted_configs[0]
+        listener_ports = {r.listener.port for r in config.http_routes}
+        assert listener_ports == {443}
+
+    def test_submit_config_uses_port_80_when_tls_disabled(
+        self,
+        context: ops.testing.Context,
+        peer_relation: ops.testing.PeerRelation,
+        public_route_relation: ops.testing.Relation,
+    ) -> None:
+        """Test that submit_config uses port 80 for the listener when TLS is disabled."""
+        from charmlibs.interfaces.istio_ingress_route import IstioIngressRouteConfig
+
+        submitted_configs = []
+
+        def capture_submit(config: IstioIngressRouteConfig) -> None:
+            submitted_configs.append(config)
+
+        state_in = create_state(relations=[peer_relation, public_route_relation])
+
+        with patch(
+            "charmlibs.interfaces.istio_ingress_route.IstioIngressRouteRequirer.submit_config",
+            side_effect=capture_submit,
+        ):
+            context.run(context.on.relation_changed(public_route_relation), state_in)
+
+        assert len(submitted_configs) == 1
+        config = submitted_configs[0]
+        listener_ports = {r.listener.port for r in config.http_routes}
+        assert listener_ports == {80}
 
 
 class TestHolisticHandler:

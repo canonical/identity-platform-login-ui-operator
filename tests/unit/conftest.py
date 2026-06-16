@@ -167,8 +167,35 @@ def tempo_relation() -> ops.testing.Relation:
 def public_route_relation() -> ops.testing.Relation:
     return ops.testing.Relation(
         endpoint="public-route",
-        interface="traefik_route",
-        remote_app_name="traefik-k8s",
+        interface="istio_ingress_route",
+        remote_app_name="istio-ingress-k8s",
+        remote_app_data={
+            "external_host": "login.example.com",
+            "tls_enabled": "False",
+        },
+    )
+
+
+@pytest.fixture
+def public_route_relation_tls() -> ops.testing.Relation:
+    return ops.testing.Relation(
+        endpoint="public-route",
+        interface="istio_ingress_route",
+        remote_app_name="istio-ingress-k8s",
+        remote_app_data={
+            "external_host": "login.example.com",
+            "tls_enabled": "True",
+        },
+    )
+
+
+@pytest.fixture
+def public_route_relation_no_host() -> ops.testing.Relation:
+    return ops.testing.Relation(
+        endpoint="public-route",
+        interface="istio_ingress_route",
+        remote_app_name="istio-ingress-k8s",
+        remote_app_data={},
     )
 
 
