@@ -12,11 +12,11 @@ import requests
 from integration.conftest import integrate_dependencies
 from integration.constants import (
     APP_NAME,
+    ISTIO_CHANNEL,
+    ISTIO_CHARM,
+    ISTIO_INGRESS_CHARM,
     LOGIN_UI_IMAGE,
-    PUBLIC_INGRESS_DOMAIN,
     PUBLIC_ROUTE_INTEGRATION_NAME,
-    TRAEFIK_CHARM,
-    TRAEFIK_PUBLIC_APP,
 )
 from integration.utils import (
     StatusPredicate,
@@ -40,10 +40,13 @@ def test_build_and_deploy(juju: jubilant.Juju, local_charm: Path) -> None:
     """
     # Deploy dependencies
     juju.deploy(
-        TRAEFIK_CHARM,
-        app=TRAEFIK_PUBLIC_APP,
-        channel="latest/stable",
-        config={"external_hostname": PUBLIC_INGRESS_DOMAIN},
+        ISTIO_CHARM,
+        channel=ISTIO_CHANNEL,
+        trust=True,
+    )
+    juju.deploy(
+        ISTIO_INGRESS_CHARM,
+        channel=ISTIO_CHANNEL,
         trust=True,
     )
 
@@ -59,8 +62,8 @@ def test_build_and_deploy(juju: jubilant.Juju, local_charm: Path) -> None:
     integrate_dependencies(juju)
 
     juju.wait(
-        ready=all_active(APP_NAME, TRAEFIK_PUBLIC_APP),
-        error=any_error(APP_NAME, TRAEFIK_PUBLIC_APP),
+        ready=all_active(APP_NAME, ISTIO_CHARM, ISTIO_INGRESS_CHARM),
+        error=any_error(APP_NAME, ISTIO_CHARM, ISTIO_INGRESS_CHARM),
         timeout=10 * 60,
     )
 
@@ -79,8 +82,7 @@ def test_app_health(
 def test_has_ingress(
     juju: jubilant.Juju, public_address: str, http_client: requests.Session
 ) -> None:
-    """Test that the login UI is accessible via ingress."""
-    # Get the traefik address and try to reach identity-platform-login-ui
+    """Test that the login UI is accessible via the istio ingress gateway."""
     resp = http_client.get(f"http://{public_address}/ui/login")
 
     assert resp.status_code == 200
@@ -100,19 +102,25 @@ def test_scaling_up(juju: jubilant.Juju) -> None:
 
 
 @pytest.mark.parametrize(
-    "remote_app_name,integration_name,is_status",
+    "remote_app_name,remote_endpoint,integration_name,is_status",
     [
-        (TRAEFIK_PUBLIC_APP, PUBLIC_ROUTE_INTEGRATION_NAME, is_active),
+        (
+            ISTIO_INGRESS_CHARM,
+            f"{ISTIO_INGRESS_CHARM}:istio-ingress-route",
+            PUBLIC_ROUTE_INTEGRATION_NAME,
+            is_active,
+        ),
     ],
 )
 def test_remove_integration(
     juju: jubilant.Juju,
     remote_app_name: str,
+    remote_endpoint: str,
     integration_name: str,
     is_status: Callable[[str], StatusPredicate],
 ) -> None:
     """Test removing and re-adding integration."""
-    with remove_integration(juju, remote_app_name, integration_name):
+    with remove_integration(juju, remote_endpoint, integration_name):
         juju.wait(
             ready=is_status(APP_NAME),
             error=any_error(APP_NAME),
