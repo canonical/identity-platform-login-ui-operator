@@ -47,17 +47,18 @@ juju integrate kratos:kratos-info identity-platform-login-ui-operator:kratos-inf
 juju integrate kratos:ui-endpoint-info identity-platform-login-ui-operator:ui-endpoint-info
 ```
 
-### Ingress
+### Ingress (public-route)
 
-The Identity Platform Login UI Operator offers integration with
-the [traefik-k8s-operator](https://github.com/canonical/traefik-k8s-operator)
-for ingress.
+The Identity Platform Login UI Operator exposes its endpoints via
+[istio-ingress-k8s](https://github.com/canonical/istio-ingress-k8s-operator).
 
-If you have a traefik deployed you can provide ingress with the following
-command:
+Deploy the required Istio components and integrate:
 
 ```shell
-juju integrate traefik-admin identity-platform-login-ui-operator:ingress
+juju deploy istio-k8s --channel 2/stable --trust
+juju deploy istio-ingress-k8s --channel 2/stable --trust
+juju integrate istio-ingress-k8s istio-k8s
+juju integrate identity-platform-login-ui-operator:public-route istio-ingress-k8s:istio-ingress-route
 ```
 
 ## OCI Images
