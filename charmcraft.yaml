@@ -46,10 +46,10 @@ requires:
       This relation can be used with a local CA to obtain the CA cert that was used to sign proxied
       endpoints.
   public-route:
-    interface: traefik_route
+    interface: istio_ingress_route
     optional: true
     description: |
-      Recommended way to expose the charm to the public internet
+      Recommended way to expose the charm to the public internet via istio-ingress-k8s
   tenant-service-info:
     interface: tenant_service_info
     optional: true

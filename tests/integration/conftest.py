@@ -13,10 +13,11 @@ import pytest
 import requests
 from integration.constants import (
     APP_NAME,
+    ISTIO_CHARM,
+    ISTIO_INGRESS_CHARM,
     PUBLIC_ROUTE_INTEGRATION_NAME,
-    TRAEFIK_PUBLIC_APP,
 )
-from integration.utils import get_unit_address, juju_model_factory
+from integration.utils import get_app_integration_data, juju_model_factory
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -138,10 +139,21 @@ def http_client() -> Generator[requests.Session, None, None]:
 
 def integrate_dependencies(juju: jubilant.Juju) -> None:
     """Integrate the login UI app with its dependencies."""
-    juju.integrate(f"{APP_NAME}:{PUBLIC_ROUTE_INTEGRATION_NAME}", TRAEFIK_PUBLIC_APP)
+    juju.integrate(ISTIO_INGRESS_CHARM, ISTIO_CHARM)
+    juju.integrate(
+        f"{APP_NAME}:{PUBLIC_ROUTE_INTEGRATION_NAME}",
+        f"{ISTIO_INGRESS_CHARM}:istio-ingress-route",
+    )
 
 
 @pytest.fixture
 def public_address(juju: jubilant.Juju) -> str:
-    """Get the public address of the Traefik application."""
-    return get_unit_address(juju, app_name=TRAEFIK_PUBLIC_APP)
+    """Get the public address published by istio-ingress-k8s."""
+    app_data = get_app_integration_data(juju, APP_NAME, PUBLIC_ROUTE_INTEGRATION_NAME)
+
+    if app_data and (external_host := app_data.get("external_host")):
+        return external_host
+
+    raise ValueError(
+        f"Could not find 'external_host' in the '{PUBLIC_ROUTE_INTEGRATION_NAME}' relation data for {APP_NAME}"
+    )
