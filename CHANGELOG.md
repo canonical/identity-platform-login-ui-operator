@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.0.0](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.2.1...v3.0.0) (2026-06-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* replace traefik with istio-ingress-route ([#465](https://github.com/canonical/identity-platform-login-ui-operator/issues/465))
+* replace traefik with istio ingress route
+
+### Features
+
+* replace traefik with istio ingress route ([dc3eb0e](https://github.com/canonical/identity-platform-login-ui-operator/commit/dc3eb0e5b66e56a7f71d8287105be59a92a475eb))
+* replace traefik with istio-ingress-route ([#465](https://github.com/canonical/identity-platform-login-ui-operator/issues/465)) ([ec27bc3](https://github.com/canonical/identity-platform-login-ui-operator/commit/ec27bc3b9244bcb35b80718d6849e97b259ebd70))
+
 ## [2.2.1](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.2.0...v2.2.1) (2026-05-29)
 
 
