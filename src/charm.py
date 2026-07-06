@@ -271,12 +271,12 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
 
     @property
     def _peers(self) -> Optional[Relation]:
-        """Fetch the peer relation."""
+        """The peer relation."""
         return self.model.get_relation(PEER_INTEGRATION_NAME)
 
     @property
     def _cookie_encryption_key(self) -> Optional[str]:
-        """Retrieve cookie encryption key from the peer data bucket."""
+        """The cookie encryption key from the peer data bucket."""
         if not self._peers:
             return None
         return self._peers.data[self.app].get(COOKIES_KEY, None)
