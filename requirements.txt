@@ -1,6 +1,6 @@
 cosl
 ops>=2.0.0
-lightkube==0.21.0
+lightkube==0.22.0
 lightkube-models<1.36
 jsonschema
 pydantic~=2.13.1
