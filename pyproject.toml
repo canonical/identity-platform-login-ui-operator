@@ -1,6 +1,63 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+[project]
+name = "identity-platform-login-ui-operator"
+version = "0.0.0"
+description = "Charmed Identity Platform Login UI Operator"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.10"
+dependencies = [
+    "cosl",
+    "ops>=2.0.0",
+    "lightkube==0.22.0",
+    "lightkube-models<1.36",
+    "jsonschema",
+    "pydantic~=2.13.1",
+    "tenacity~=9.1.2",
+    "yarl",
+    "dacite",
+    "jinja2",
+]
+
+[dependency-groups]
+fmt = [
+    "isort",
+    "ruff",
+]
+lint = [
+    "codespell",
+    "isort",
+    "ruff",
+    "tomli",
+]
+unit = [
+    "pytest",
+    "pytest-mock",
+    "coverage[toml]",
+    "ops[testing]",
+]
+integration = [
+    "jubilant",
+    "pytest",
+    "requests",
+    "tenacity",
+]
+dev = [
+    "pre-commit",
+    "mypy",
+    "types-PyYAML",
+    "types-requests",
+    { include-group = "fmt" },
+    { include-group = "lint" },
+    { include-group = "unit" },
+    { include-group = "integration" },
+]
+
+[tool.uv]
+package = false
+
 # Testing tools configuration
 [tool.coverage.run]
 branch = true
