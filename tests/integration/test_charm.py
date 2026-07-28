@@ -43,6 +43,7 @@ def test_build_and_deploy(juju: jubilant.Juju, local_charm: Path) -> None:
         TRAEFIK_CHARM,
         app=TRAEFIK_PUBLIC_APP,
         channel="latest/stable",
+        revision=342,
         config={"external_hostname": PUBLIC_INGRESS_DOMAIN},
         trust=True,
     )
