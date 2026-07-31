@@ -30,11 +30,11 @@ jobs:
       contents: write
       issues: write
     name: Publish Charm
-    uses: canonical/identity-team/.github/workflows/charm-publish.yaml@b5070d98993fa72f429f4fdf8010f6f9a94eb4e0 # v1.14.2
+    uses: canonical/identity-team/.github/workflows/charm-publish.yaml@1bf335af1d939c8543e53d376dd49d79126c2cd3 # v1.15.0
     with:
       destination_channel: ${{ inputs.destination_channel}}
       source_branch: ${{ inputs.source_branch}}
-      use-charmcraftcache: true
+      use-charmcraftcache: false
     secrets:
       CHARMCRAFT_CREDENTIALS: ${{ secrets.CHARMCRAFT_CREDENTIALS}}
 
@@ -76,7 +76,7 @@ jobs:
       - publish
       - revision
     if: ${{ (needs.publish.outputs.channel == 'latest/edge') }}
-    uses: canonical/identity-team/.github/workflows/charm-deploy.yaml@b5070d98993fa72f429f4fdf8010f6f9a94eb4e0 # v1.14.2
+    uses: canonical/identity-team/.github/workflows/charm-deploy.yaml@1bf335af1d939c8543e53d376dd49d79126c2cd3 # v1.15.0
     with:
         model: blue-iam
         revision: ${{ needs.revision.outputs.revision }}
@@ -97,7 +97,7 @@ jobs:
       - publish
       - revision
     if: ${{ (needs.publish.outputs.channel == 'latest/stable') }}
-    uses: canonical/identity-team/.github/workflows/charm-deploy.yaml@b5070d98993fa72f429f4fdf8010f6f9a94eb4e0 # v1.14.2
+    uses: canonical/identity-team/.github/workflows/charm-deploy.yaml@1bf335af1d939c8543e53d376dd49d79126c2cd3 # v1.15.0
     with:
       model: green-iam
       revision: ${{ needs.revision.outputs.revision }}
