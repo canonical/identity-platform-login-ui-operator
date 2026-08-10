@@ -12,7 +12,7 @@ dependencies = [
     "cosl",
     "ops>=2.0.0",
     "lightkube==0.22.0",
-    "lightkube-models<1.36",
+    "lightkube-models<1.37",
     "jsonschema",
     "pydantic~=2.13.1",
     "tenacity~=9.1.2",
