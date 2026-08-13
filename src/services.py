@@ -113,7 +113,7 @@ class PebbleService:
             container["environment"]["TRACING_ENABLED"] = True
 
         if tenant_service_info and tenant_service_info.is_ready:
-            container["environment"]["TENANTS_SERVICE_URL"] = tenant_service_info.service_url
+            container["environment"]["TENANT_SERVICE_GRPC_ADDRESS"] = tenant_service_info.grpc_url
             container["environment"]["MULTI_TENANCY_ENABLED"] = True
 
         # Define Pebble layer configuration
