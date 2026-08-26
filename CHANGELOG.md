@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.3.0](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.2.1...v2.3.0) (2026-07-09)
+
+
+### Features
+
+* support arm64 ([d0be8b6](https://github.com/canonical/identity-platform-login-ui-operator/commit/d0be8b675704e6fe039aab27374bd8d1e8f86dd6))
+* support arm64 ([#473](https://github.com/canonical/identity-platform-login-ui-operator/issues/473)) ([9264be6](https://github.com/canonical/identity-platform-login-ui-operator/commit/9264be67b79bef209da2268ba6a9368f49af399d))
+
 ## [2.2.1](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.2.0...v2.2.1) (2026-05-29)
 
 

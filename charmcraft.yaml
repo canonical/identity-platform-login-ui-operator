@@ -20,7 +20,7 @@ resources:
   oci-image:
     type: oci-image
     description: OCI image for login-ui
-    upstream-source: ghcr.io/canonical/identity-platform-login-ui:v0.27.0
+    upstream-source: ghcr.io/canonical/identity-platform-login-ui:v0.28.0
 requires:
   kratos-info:
     interface: kratos_info
@@ -101,11 +101,12 @@ config:
       type: string
 platforms:
   ubuntu@22.04:amd64:
+  ubuntu@22.04:arm64:
+  ubuntu@26.04:amd64:
+  ubuntu@26.04:arm64:
 parts:
   charm:
-    charm-binary-python-packages:
-      - jsonschema
-      - "setuptools>=70.0.0"
-    build-packages:
-      - "rustc-1.85"
-      - "cargo-1.85"
+    plugin: uv
+    source: .
+    build-snaps:
+      - astral-uv
