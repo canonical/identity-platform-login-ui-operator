@@ -181,9 +181,7 @@ class PublicRouteData:
                         )
                     ),
                     HTTPRouteMatch(
-                        path=HTTPPathMatch(
-                            type=HTTPPathMatchType.Exact, value="/api/v0/tenants"
-                        )
+                        path=HTTPPathMatch(type=HTTPPathMatchType.Exact, value="/api/v0/tenants")
                     ),
                     HTTPRouteMatch(
                         path=HTTPPathMatch(

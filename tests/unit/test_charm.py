@@ -290,7 +290,12 @@ class TestPublicRouteRelationEvents:
         state_out = context.run(context.on.pebble_ready(container), state_in)
 
         container_out = state_out.get_container(WORKLOAD_CONTAINER_NAME)
-        env = container_out.layers[WORKLOAD_CONTAINER_NAME].services[WORKLOAD_CONTAINER_NAME].environment
+        env = (
+            container_out
+            .layers[WORKLOAD_CONTAINER_NAME]
+            .services[WORKLOAD_CONTAINER_NAME]
+            .environment
+        )
         assert env["BASE_URL"] == "http://login.example.com"
 
     def test_domain_url_is_https_when_tls_enabled(
@@ -306,7 +311,12 @@ class TestPublicRouteRelationEvents:
         state_out = context.run(context.on.pebble_ready(container), state_in)
 
         container_out = state_out.get_container(WORKLOAD_CONTAINER_NAME)
-        env = container_out.layers[WORKLOAD_CONTAINER_NAME].services[WORKLOAD_CONTAINER_NAME].environment
+        env = (
+            container_out
+            .layers[WORKLOAD_CONTAINER_NAME]
+            .services[WORKLOAD_CONTAINER_NAME]
+            .environment
+        )
         assert env["BASE_URL"] == "https://login.example.com"
 
     def test_domain_url_is_none_when_no_external_host(
@@ -322,7 +332,12 @@ class TestPublicRouteRelationEvents:
         state_out = context.run(context.on.pebble_ready(container), state_in)
 
         container_out = state_out.get_container(WORKLOAD_CONTAINER_NAME)
-        env = container_out.layers[WORKLOAD_CONTAINER_NAME].services[WORKLOAD_CONTAINER_NAME].environment
+        env = (
+            container_out
+            .layers[WORKLOAD_CONTAINER_NAME]
+            .services[WORKLOAD_CONTAINER_NAME]
+            .environment
+        )
         assert env["BASE_URL"] is None
 
     def test_submit_config_called_with_all_routes(

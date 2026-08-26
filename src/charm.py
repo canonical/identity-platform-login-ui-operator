@@ -213,10 +213,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         if self.unit.is_leader() and not self._cookie_encryption_key:
             self._peers.data[self.app][COOKIES_KEY] = secrets.token_hex(16)
 
-        if (
-            self.unit.is_leader()
-            and self.public_route.is_ready()
-        ):
+        if self.unit.is_leader() and self.public_route.is_ready():
             public_route_config = PublicRouteData.load(self.public_route).config
             self.public_route.submit_config(public_route_config)
 
