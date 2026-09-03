@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.4.0](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.3.0...v2.4.0) (2026-09-03)
+
+
+### Features
+
+* multi-base support ([#490](https://github.com/canonical/identity-platform-login-ui-operator/issues/490)) ([b8497db](https://github.com/canonical/identity-platform-login-ui-operator/commit/b8497db755249a05353451e3f778cc0d365c9319))
+* support 26.04 base ([85ec636](https://github.com/canonical/identity-platform-login-ui-operator/commit/85ec6363c9e6d31149b912f0a9b26b2845fb09b6))
+
+
+### Bug Fixes
+
+* **deps:** update dependency lightkube to v1 ([f67c0be](https://github.com/canonical/identity-platform-login-ui-operator/commit/f67c0bebce62fd921fdc596c9904ba9db09b24a1))
+* **deps:** update dependency lightkube to v1 ([#492](https://github.com/canonical/identity-platform-login-ui-operator/issues/492)) ([334c94f](https://github.com/canonical/identity-platform-login-ui-operator/commit/334c94f582969ae9336ac2ec3b758dbbbe3f9a74))
+* **deps:** update dependency lightkube-models to &lt;1.37 ([8866583](https://github.com/canonical/identity-platform-login-ui-operator/commit/88665834ebe6ed3b59ebff5659d6f42c20cda478))
+* **deps:** update dependency lightkube-models to &lt;1.37 ([#488](https://github.com/canonical/identity-platform-login-ui-operator/issues/488)) ([fa88763](https://github.com/canonical/identity-platform-login-ui-operator/commit/fa88763b35d67896090c54a9bdebbf925ea3adc2))
+* **deps:** update dependency lightkube-models to &lt;1.38 ([95c8719](https://github.com/canonical/identity-platform-login-ui-operator/commit/95c87191cb92a6852b2f09dd7388d43faeef5aee))
+* **deps:** update dependency lightkube-models to &lt;1.38 ([#505](https://github.com/canonical/identity-platform-login-ui-operator/issues/505)) ([4ac1647](https://github.com/canonical/identity-platform-login-ui-operator/commit/4ac16476cb97122b8df0937d3cb7bbf4c8947a42))
+* use the v0.28.0 tenant-service contract for multi-tenancy ([afd0e33](https://github.com/canonical/identity-platform-login-ui-operator/commit/afd0e335f35b65aa1dfcbe79773c439ae695de79))
+
 ## [2.3.0](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.2.1...v2.3.0) (2026-07-09)
 
 
