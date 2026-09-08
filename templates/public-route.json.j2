@@ -33,14 +33,14 @@
           ]
         }
       },
-      "juju-{{ identifier }}-public-api-router-api-device": {
+      "juju-{{ identifier }}-public-api-router-api-hydra": {
         "entryPoints": ["web"],
-        "rule": "Path(`/api/device`)",
+        "rule": "PathPrefix(`/api/hydra`)",
         "service": "juju-{{ identifier }}-public-api-service"
       },
-      "juju-{{ identifier }}-public-api-router-api-device-tls": {
+      "juju-{{ identifier }}-public-api-router-api-hydra-tls": {
         "entryPoints": ["websecure"],
-        "rule": "Path(`/api/device`)",
+        "rule": "PathPrefix(`/api/hydra`)",
         "service": "juju-{{ identifier }}-public-api-service",
         "tls": {
           "domains": [
