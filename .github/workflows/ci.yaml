@@ -18,6 +18,10 @@ on:
        - "terraform/**"
 
 jobs:
+  openspec-check:
+    name: OpenSpec Check
+    uses: ./.github/workflows/openspec-check.yaml
+
   tests:
     name: CI
     uses: canonical/identity-team/.github/workflows/charm-pull-request.yaml@fc85af7448538c473be450dc2c8ec5d158ea0d15 # v1.17.0
