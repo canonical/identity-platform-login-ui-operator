@@ -1,0 +1,50 @@
+schema: spec-driven
+
+context: |
+  Tech stack & architecture:
+  - Language & Runtime: Python 3.12+ async-first charmed operator code.
+  - Framework: Canonical Ops SDK framework (`ops`) implementing the 3-Layer Architecture pattern.
+  - Container Orchestration: Kubernetes-native charm running Pebble services (`login-ui`) on Ubuntu bases.
+  - Security & Secrets: Juju Secrets protocol for sensitive config and inter-charm token exchange.
+  - Quality & Testing: Strict typing (`mypy`), linting (`ruff`), unit testing (`pytest`, `ops.testing`), e2e (`jubilant`).
+
+  Directory structure:
+  - src/charm.py: Orchestration layer handling Juju event hooks and state evaluation.
+  - src/services.py: Domain abstraction services wrapping workload lifecycle, configuration generation, and health checks.
+  - src/integrations.py: Relation handlers and library integration abstractions (Kratos, Hydra, Tenant Service, Traefik Route, Login UI endpoints).
+  - src/certificate_transfer_integration.py: Certificate transfer integration handler.
+  - src/constants.py: Centralised constants for ports, relation names, and container configurations.
+  - src/exceptions.py: Custom exception definitions for charm service errors.
+  - src/utils.py: Helper functions for URL normalization and general utilities.
+  - tests/unit/: Table-driven charm unit path tests leveraging the Ops SDK framework and `pytest-mock`.
+  - tests/integration/: End-to-end cloud-native jubilant integration testing suite.
+
+  Product language:
+  - Write OpenSpec proposals and specs in user-facing product behaviour language
+  - Requirements should describe the experience, observable behaviour, and product contract
+  - Put internal mechanisms in design.md or tasks.md unless the mechanism is itself part of the user-facing contract
+  - Avoid technical jargon in proposals and specs when possible
+
+rules:
+  proposal:
+    - Keep proposals concise and strictly under 400 words.
+    - Include a "Non-goals" section to clarify what is out of scope for the proposal
+    - Include a "Success Metrics" section defining how we will measure the impact of this feature
+    - Map every proposed environmental update directly to the workload data provenance table.
+  specs:
+    - Include a "Purpose" section for each spec to explain the rationale behind the spec
+    - Cover happy path, validation errors, and edge cases in the spec
+    - Explicitly state any breaking changes or backward compatibility requirements
+  design:
+    - All design decisions should be justified with trade-offs and alternatives considered
+    - Include database schema modifications (e.g., tables, indexes, migrations) explicitly when applicable
+    - Include diagrams (Mermaid) or visual aids when describing complex designs
+    - Include security, performance, observability, scalability, migration considerations as applicable to the design
+  tasks:
+    - Break tasks down into distinct, single-event or relation-driven units of work.
+    - Every task must be independently completable (no implicit ordering within a group)
+    - Each task must explicitly reference the manifest or code file(s) it mutates (e.g., `src/charm.py`, `charmcraft.yaml`).
+    - Explicitly list unit, integration, or e2e testing requirements for each task (every relation implementation task must contain a parallel task mapping its corresponding unit/integration test suite requirements).
+    - Include a verification suite section
+    - Include a documentation & rollout section covering any necessary documentation updates and rollout steps
+    - Record deviations from the plan in an "Implementation Notes" section at the end
