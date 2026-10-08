@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.4.1](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.4.0...v2.4.1) (2026-10-08)
+
+
+### Bug Fixes
+
+* **deps:** update dependency pydantic to ~=2.14.0 ([b8ef48c](https://github.com/canonical/identity-platform-login-ui-operator/commit/b8ef48cbd521cb5e60bc3d66c630d0956bfa95cf))
+* **deps:** update dependency pydantic to ~=2.14.0 ([#536](https://github.com/canonical/identity-platform-login-ui-operator/issues/536)) ([a1232fe](https://github.com/canonical/identity-platform-login-ui-operator/commit/a1232fe287c1d02f5c3b0209802b8015e75bfd72))
+* **deps:** update dependency tenacity to ~=9.2.1 ([9453bd4](https://github.com/canonical/identity-platform-login-ui-operator/commit/9453bd45e421599699723c24068fcdd3cd80c720))
+* **deps:** update dependency tenacity to ~=9.2.1 ([#532](https://github.com/canonical/identity-platform-login-ui-operator/issues/532)) ([006a083](https://github.com/canonical/identity-platform-login-ui-operator/commit/006a083c0aba518b5952756bb7b414e6e62938fe))
+
 ## [2.4.0](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.3.0...v2.4.0) (2026-09-24)
 
 
