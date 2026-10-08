@@ -14,7 +14,7 @@ dependencies = [
     "lightkube==1.0.1",
     "lightkube-models<1.38",
     "jsonschema",
-    "pydantic~=2.13.1",
+    "pydantic~=2.14.0",
     "tenacity~=9.2.1",
     "yarl",
     "dacite",
