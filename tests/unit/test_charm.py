@@ -3,9 +3,11 @@
 
 """Test functions for unit testing Identity Platform Login UI Operator."""
 
+from dataclasses import replace
 from unittest.mock import patch
 
 import ops.testing
+import pytest
 from ops import ActiveStatus, BlockedStatus, WaitingStatus
 
 from constants import COOKIES_KEY, WORKLOAD_CONTAINER_NAME, WORKLOAD_RUN_COMMAND
@@ -361,6 +363,7 @@ class TestPublicRouteRelationEvents:
             "/api/v0/tenants/resolve",
             "/api/v0/tenants",
             "/api/v0/auth/tenant",
+            "/api/v0/sso/complete",
             "/ui",
         }
 
@@ -476,3 +479,207 @@ class TestStatusManagement:
             state_out = context.run(context.on.pebble_ready(container), state_in)
 
         assert state_out.unit_status == BlockedStatus("Failed to replan, please consult the logs")
+
+
+BYOSSO_ENV_VARS = (
+    "BYOSSO_ENABLED",
+    "SSO_SERVICE_GRPC_ADDRESS",
+    "KRATOS_PRIVILEGED_SESSION_MAX_AGE",
+)
+
+
+def _environment(state_out: ops.testing.State) -> dict:
+    layer = state_out.get_container(WORKLOAD_CONTAINER_NAME).layers[WORKLOAD_CONTAINER_NAME]
+    return layer.services[WORKLOAD_CONTAINER_NAME].environment
+
+
+class TestBYOSSO:
+    """Tests for the "Bring Your Own SSO" configuration and its integrations."""
+
+    @pytest.fixture
+    def byosso_relations(
+        self,
+        peer_relation: ops.testing.PeerRelation,
+        kratos_relation: ops.testing.Relation,
+        tenant_service_relation: ops.testing.Relation,
+        sso_service_relation: ops.testing.Relation,
+        ui_endpoint_relation: ops.testing.Relation,
+    ) -> dict[str, ops.testing.Relation]:
+        return {
+            "identity-platform-login-ui": peer_relation,
+            "kratos-info": kratos_relation,
+            "tenant-service-info": tenant_service_relation,
+            "sso-service-info": sso_service_relation,
+            "ui-endpoint-info": ui_endpoint_relation,
+        }
+
+    @staticmethod
+    def _published(state_out: ops.testing.State, relation: ops.testing.Relation) -> str | None:
+        return state_out.get_relation(relation.id).local_app_data.get("byosso_enabled")
+
+    def test_layer_without_byosso_by_default(
+        self,
+        context: ops.testing.Context,
+        byosso_relations: dict[str, ops.testing.Relation],
+    ) -> None:
+        """Off, the integrations change nothing in the workload."""
+        state_in = create_state(relations=list(byosso_relations.values()))
+        container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
+
+        state_out = context.run(context.on.pebble_ready(container), state_in)
+
+        env = _environment(state_out)
+        assert not set(BYOSSO_ENV_VARS) & set(env)
+        assert self._published(state_out, byosso_relations["ui-endpoint-info"]) == "false"
+        assert state_out.unit_status == ActiveStatus()
+
+    def test_layer_env_with_byosso(
+        self,
+        context: ops.testing.Context,
+        byosso_relations: dict[str, ops.testing.Relation],
+    ) -> None:
+        state_in = create_state(
+            relations=list(byosso_relations.values()), config={"byosso_enabled": True}
+        )
+        container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
+
+        state_out = context.run(context.on.pebble_ready(container), state_in)
+
+        env = _environment(state_out)
+        assert env["BYOSSO_ENABLED"] is True
+        assert env["MULTI_TENANCY_ENABLED"] is True
+        assert env["SSO_SERVICE_GRPC_ADDRESS"] == "sso-service.namespace.svc.cluster.local:50051"
+        assert env["KRATOS_PRIVILEGED_SESSION_MAX_AGE"] == "1h"
+        assert self._published(state_out, byosso_relations["ui-endpoint-info"]) == "true"
+        assert state_out.unit_status == ActiveStatus()
+
+    @pytest.mark.parametrize("missing", ["tenant-service-info", "sso-service-info", "kratos-info"])
+    def test_byosso_missing_integration(
+        self,
+        context: ops.testing.Context,
+        byosso_relations: dict[str, ops.testing.Relation],
+        missing: str,
+    ) -> None:
+        """Without a requirement the charm plans nothing and says what is missing.
+
+        What Kratos was told stays as it was.
+        """
+        ui_endpoint = replace(
+            byosso_relations["ui-endpoint-info"], local_app_data={"byosso_enabled": "true"}
+        )
+        byosso_relations["ui-endpoint-info"] = ui_endpoint
+        relations = [r for name, r in byosso_relations.items() if name != missing]
+        state_in = create_state(relations=relations, config={"byosso_enabled": True})
+        container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
+
+        state_out = context.run(context.on.pebble_ready(container), state_in)
+
+        assert state_out.unit_status == BlockedStatus(f"Missing integration {missing}")
+        assert (
+            WORKLOAD_CONTAINER_NAME not in state_out.get_container(WORKLOAD_CONTAINER_NAME).layers
+        )
+        assert self._published(state_out, ui_endpoint) == "true"
+
+    @pytest.mark.parametrize("pending", ["tenant-service-info", "sso-service-info", "kratos-info"])
+    def test_byosso_waiting_for_integration_data(
+        self,
+        context: ops.testing.Context,
+        byosso_relations: dict[str, ops.testing.Relation],
+        pending: str,
+    ) -> None:
+        byosso_relations[pending] = replace(byosso_relations[pending], remote_app_data={})
+        state_in = create_state(
+            relations=list(byosso_relations.values()), config={"byosso_enabled": True}
+        )
+        container = state_in.get_container(WORKLOAD_CONTAINER_NAME)
+
+        state_out = context.run(context.on.pebble_ready(container), state_in)
+
+        assert state_out.unit_status == WaitingStatus(f"Waiting for {pending} data")
+        assert (
+            WORKLOAD_CONTAINER_NAME not in state_out.get_container(WORKLOAD_CONTAINER_NAME).layers
+        )
+
+    @pytest.mark.parametrize(
+        "kratos_data, message",
+        [
+            (
+                {"privileged_session_max_age": ""},
+                "byosso_enabled needs a newer Kratos charm: refresh it",
+            ),
+            (
+                {"oidc_webauthn_sequencing_enabled": "True"},
+                "byosso_enabled conflicts with Kratos OIDC-WebAuthn sequencing",
+            ),
+            (
+                {"verification_enabled": "False"},
+                "byosso_enabled requires Kratos's enable_verification",
+            ),
+        ],
+    )
+    def test_byosso_refused_for_what_kratos_publishes(
+        self,
+        context: ops.testing.Context,
+        byosso_relations: dict[str, ops.testing.Relation],
+        kratos_data: dict,
+        message: str,
+    ) -> None:
+        """login-ui and Kratos's charm refuse the feature on the same conditions."""
+        kratos = byosso_relations["kratos-info"]
+        byosso_relations["kratos-info"] = replace(
+            kratos, remote_app_data={**kratos.remote_app_data, **kratos_data}
+        )
+        state_in = create_state(
+            relations=list(byosso_relations.values()), config={"byosso_enabled": True}
+        )
+
+        state_out = context.run(context.on.config_changed(), state_in)
+
+        assert state_out.unit_status == BlockedStatus(message)
+        # Blocked on the feature: nothing is written.
+        assert self._published(state_out, byosso_relations["ui-endpoint-info"]) is None
+
+    def test_sso_service_relation_broken(
+        self,
+        context: ops.testing.Context,
+        byosso_relations: dict[str, ops.testing.Relation],
+    ) -> None:
+        state_in = create_state(
+            relations=list(byosso_relations.values()), config={"byosso_enabled": True}
+        )
+
+        state_out = context.run(
+            context.on.relation_broken(byosso_relations["sso-service-info"]), state_in
+        )
+
+        assert state_out.unit_status == BlockedStatus("Missing integration sso-service-info")
+
+    @pytest.mark.parametrize(
+        "config, kratos_data, published",
+        [
+            ({"byosso_enabled": True}, {}, "true"),
+            ({}, {}, "false"),
+            # Blocked on the feature: what Kratos was told stays as it was.
+            ({"byosso_enabled": True}, {"verification_enabled": "False"}, None),
+        ],
+    )
+    def test_byosso_published_with_the_endpoints(
+        self,
+        context: ops.testing.Context,
+        byosso_relations: dict[str, ops.testing.Relation],
+        config: dict,
+        kratos_data: dict,
+        published: str | None,
+    ) -> None:
+        """A Kratos related later is told what the charm's configuration and relations say."""
+        ui_endpoint = byosso_relations["ui-endpoint-info"]
+        kratos = byosso_relations["kratos-info"]
+        byosso_relations["kratos-info"] = replace(
+            kratos, remote_app_data={**kratos.remote_app_data, **kratos_data}
+        )
+        state_in = create_state(relations=list(byosso_relations.values()), config=config)
+
+        state_out = context.run(context.on.relation_created(ui_endpoint), state_in)
+
+        assert self._published(state_out, ui_endpoint) == published
+        assert "login_url" in state_out.get_relation(ui_endpoint.id).local_app_data
