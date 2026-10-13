@@ -53,3 +53,8 @@ def leader_unit(func: CharmEventHandler) -> CharmEventHandler:
         return func(charm, *args, **kwargs)
 
     return wrapper  # type: ignore[return-value]
+
+
+def is_true(value: Any) -> bool:
+    """Read a boolean that a relation databag holds as a string, e.g. "True"."""
+    return str(value).lower() == "true"

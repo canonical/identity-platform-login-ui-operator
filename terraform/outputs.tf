@@ -16,6 +16,7 @@ output "requires" {
     tracing             = "tracing"
     receive-ca-cert     = "receive-ca-cert"
     tenant-service-info = "tenant-service-info"
+    sso-service-info    = "sso-service-info"
   }
 }
 

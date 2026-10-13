@@ -65,6 +65,7 @@ def create_state(
     can_connect: bool = True,
     container: ops.testing.Container | None = None,
     relations: list[ops.testing.Relation] | None = None,
+    config: dict | None = None,
 ) -> ops.testing.State:
     """Factory function to create charm state with explicit parameters.
 
@@ -73,6 +74,7 @@ def create_state(
         can_connect: Whether the workload container can connect (ignored if container provided)
         container: Custom container to use (overrides can_connect if provided)
         relations: List of relations to include in the state
+        config: Charm config options to set
     """
     if container is None:
         container = ops.testing.Container(
@@ -93,6 +95,7 @@ def create_state(
         leader=leader,
         containers=[container],
         relations=relations or [],
+        config=config or {},
     )
 
 
@@ -125,6 +128,7 @@ def kratos_relation() -> ops.testing.Relation:
             "oidc_webauthn_sequencing_enabled": "False",
             "verification_enabled": "True",
             "feature_flags": "password,totp,webauthn,backup_codes,account_linking",
+            "privileged_session_max_age": "1h",
         },
     )
 
@@ -210,4 +214,23 @@ def tenant_service_relation() -> ops.testing.Relation:
             # tenant-service publishes a bare host:port, not a URL with a scheme.
             "grpc_url": "tenant-service.namespace.svc.cluster.local:50051",
         },
+    )
+
+
+@pytest.fixture
+def sso_service_relation() -> ops.testing.Relation:
+    return ops.testing.Relation(
+        endpoint="sso-service-info",
+        interface="sso_service_info",
+        remote_app_name="sso-service",
+        remote_app_data={"grpc_url": "sso-service.namespace.svc.cluster.local:50051"},
+    )
+
+
+@pytest.fixture
+def ui_endpoint_relation() -> ops.testing.Relation:
+    return ops.testing.Relation(
+        endpoint="ui-endpoint-info",
+        interface="login_ui_endpoints",
+        remote_app_name="kratos",
     )

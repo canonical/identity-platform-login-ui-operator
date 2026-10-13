@@ -19,6 +19,7 @@ dependencies = [
     "yarl",
     "dacite",
     "charmlibs-interfaces-istio-ingress-route==1.0.2",
+    "sso-service-info",
 ]
 
 [dependency-groups]
@@ -57,6 +58,9 @@ dev = [
 
 [tool.uv]
 package = false
+
+[tool.uv.sources]
+sso-service-info = { git = "https://github.com/canonical/sso-service-operator", subdirectory = "interfaces/sso_service_info", rev = "02c6895c67735fa195b16557debb966fd2ea19c8" }
 
 # Testing tools configuration
 [tool.coverage.run]
