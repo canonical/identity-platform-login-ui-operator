@@ -7,9 +7,9 @@ import subprocess
 from pathlib import Path
 from typing import Callable, Union
 
-from charms.certificate_transfer_interface.v0.certificate_transfer import (
-    CertificateAvailableEvent,
-    CertificateRemovedEvent,
+from charmlibs.interfaces.certificate_transfer import (
+    CertificatesAvailableEvent,
+    CertificatesRemovedEvent,
     CertificateTransferRequires,
 )
 from ops import CharmBase, Object
@@ -37,20 +37,15 @@ class CertTransfer(Object):
         self.bundle_name = bundle_name
 
         self.framework.observe(
-            self.cert_transfer.on.certificate_available, self._on_certificate_event
+            self.cert_transfer.on.certificate_set_updated, self._on_certificate_event
         )
         self.framework.observe(
-            self.cert_transfer.on.certificate_removed, self._on_certificate_event
+            self.cert_transfer.on.certificates_removed, self._on_certificate_event
         )
 
     @property
     def ca_bundle(self) -> str:
-        bundle = set()
-        for relation in self.charm.model.relations.get(self.cert_transfer.relationship_name, []):
-            for unit in set(relation.units).difference([self.charm.app, self.charm.unit]):
-                if ca := relation.data[unit].get("ca"):
-                    bundle.add(ca)
-        return "\n".join(sorted(bundle))
+        return "\n".join(sorted(self.cert_transfer.get_all_certificates()))
 
     def push_ca_certs(self) -> None:
         """Push the cert bundle to the container."""
@@ -69,7 +64,7 @@ class CertTransfer(Object):
         self.container.remove_path(LOCAL_CA_CERTS_PATH / self.bundle_name)
 
     def _on_certificate_event(
-        self, event: Union[CertificateAvailableEvent, CertificateRemovedEvent]
+        self, event: Union[CertificatesAvailableEvent, CertificatesRemovedEvent]
     ) -> None:
         self.push_ca_certs()
         return self.callback_fn(event)
