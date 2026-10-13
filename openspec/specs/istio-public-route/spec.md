@@ -1,4 +1,10 @@
-## ADDED Requirements
+# istio-public-route Specification
+
+## Purpose
+
+This capability exposes the login UI through the Istio ingress. The charm requires the `public-route` relation with the interface `istio_ingress_route`. On that relation, the leader submits the listener and the HTTP routes of the login UI. The charm also derives the public URL of the login UI from the data of the ingress provider. It writes its endpoint URLs in `ui-endpoint-info`.
+
+## Requirements
 
 ### Requirement: Charm registers istio-ingress-route relation
 The charm SHALL declare a `public-route` relation with interface `istio_ingress_route` in `charmcraft.yaml` (replacing the former `traefik_route` interface). The relation SHALL remain optional and limited to one provider.
@@ -82,6 +88,15 @@ The charm SHALL expose an exact-match route for path `/api/v0/auth/tenant` with 
 #### Scenario: /api/v0/auth/tenant route present in config
 - **WHEN** `IstioIngressRouteConfig` is built
 - **THEN** it SHALL contain an `HTTPRoute` with `HTTPPathMatchType.Exact` value `/api/v0/auth/tenant`
+
+---
+
+### Requirement: Route – /api/v0/sso/complete exact path
+The charm SHALL expose an exact-match route for path `/api/v0/sso/complete` with no filters.
+
+#### Scenario: /api/v0/sso/complete route present in config
+- **WHEN** `IstioIngressRouteConfig` is built
+- **THEN** it SHALL contain an `HTTPRoute` with `HTTPPathMatchType.Exact` value `/api/v0/sso/complete`
 
 ---
 
