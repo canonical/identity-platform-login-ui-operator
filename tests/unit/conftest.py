@@ -169,6 +169,10 @@ def public_route_relation() -> ops.testing.Relation:
         endpoint="public-route",
         interface="traefik_route",
         remote_app_name="traefik-k8s",
+        remote_app_data={
+            "external_host": "example.com",
+            "scheme": "https",
+        },
     )
 
 
