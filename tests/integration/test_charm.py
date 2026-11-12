@@ -80,11 +80,14 @@ def test_app_health(
 def test_has_ingress(
     juju: jubilant.Juju, public_address: str, http_client: requests.Session
 ) -> None:
-    """Test that the login UI is accessible via ingress."""
-    # Get the traefik address and try to reach identity-platform-login-ui
-    resp = http_client.get(f"http://{public_address}/ui/login")
+    """Test that the login UI API is accessible via ingress and /ui is not exposed."""
+    # Get the traefik address and try to reach identity-platform-login-ui API
+    resp = http_client.get(f"http://{public_address}/api/v0/app-config")
 
     assert resp.status_code == 200
+
+    ui_resp = http_client.get(f"http://{public_address}/ui/login")
+    assert ui_resp.status_code == 404
 
 
 def test_scaling_up(juju: jubilant.Juju) -> None:
