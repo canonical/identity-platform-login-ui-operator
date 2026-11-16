@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.2](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.4.1...v2.4.2) (2026-11-16)
+
+
+### Bug Fixes
+
+* update charm dependent libs ([924e48e](https://github.com/canonical/identity-platform-login-ui-operator/commit/924e48eaafcdfd3dad0c697f0e47f1623f7bf27e))
+
 ## [2.4.1](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.4.0...v2.4.1) (2026-11-10)
 
 
