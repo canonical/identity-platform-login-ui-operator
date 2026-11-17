@@ -29,6 +29,7 @@ from charms.hydra.v0.hydra_endpoints import (
 from charms.kratos.v0.kratos_info import KratosInfoRelationDataMissingError, KratosInfoRequirer
 from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
 from charms.tenant_service.v0.tenant_service_info import TenantServiceInfoRequirer
+from sso_service_info import SSOServiceInfoRequirer
 from yarl import URL
 
 from constants import APPLICATION_PORT, INGRESS_HTTP_PORT, INGRESS_HTTPS_PORT
@@ -67,6 +68,7 @@ class KratosInfoData:
     verification_enabled: bool = False
     is_ready: bool = False
     feature_flags: Optional[list[str]] = None
+    privileged_session_max_age: str = ""
 
     @classmethod
     def load(cls, requirer: KratosInfoRequirer) -> "KratosInfoData":
@@ -87,6 +89,7 @@ class KratosInfoData:
             verification_enabled=info.get("verification_enabled"),
             is_ready=requirer.is_ready(),
             feature_flags=info.get("feature_flags", None),
+            privileged_session_max_age=info.get("privileged_session_max_age", ""),
         )
 
 
@@ -191,6 +194,11 @@ class PublicRouteData:
                         )
                     ),
                     HTTPRouteMatch(
+                        path=HTTPPathMatch(
+                            type=HTTPPathMatchType.Exact, value="/api/v0/sso/complete"
+                        )
+                    ),
+                    HTTPRouteMatch(
                         path=HTTPPathMatch(type=HTTPPathMatchType.PathPrefix, value="/ui")
                     ),
                 ],
@@ -237,3 +245,27 @@ class TenantServiceInfoData:
             is_ready = parsed.scheme in ("http", "https") and bool(parsed.host)
 
         return cls(service_url=service_url, grpc_url=grpc_url, is_ready=is_ready)
+
+
+@dataclass(frozen=True, slots=True)
+class SSOServiceInfoData:
+    """The data source from the sso-service-info integration."""
+
+    grpc_url: str = ""
+    is_ready: bool = False
+
+    @classmethod
+    def load(cls, requirer: SSOServiceInfoRequirer) -> "SSOServiceInfoData":
+        """Load sso-service's gRPC address from the relation."""
+        if not (grpc_url := requirer.get_grpc_url()):
+            return cls()
+
+        return cls(grpc_url=grpc_url, is_ready=True)
+
+
+@dataclass(frozen=True, slots=True)
+class BYOSSOData:
+    """What login-ui's "Bring Your Own SSO" reads from the charm's integrations."""
+
+    sso_service_info: SSOServiceInfoData
+    privileged_session_max_age: str = ""

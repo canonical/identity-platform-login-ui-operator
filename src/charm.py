@@ -39,11 +39,13 @@ from ops import (
     MaintenanceStatus,
     Relation,
     RelationEvent,
+    StatusBase,
     WaitingStatus,
     WorkloadEvent,
     main,
 )
 from ops.pebble import Layer
+from sso_service_info import SSOServiceInfoRequirer
 
 from certificate_transfer_integration import CertTransfer
 from constants import (
@@ -57,19 +59,23 @@ from constants import (
     PEER_INTEGRATION_NAME,
     PROMETHEUS_INTEGRATION_NAME,
     PUBLIC_ROUTE_INTEGRATION_NAME,
+    SSO_SERVICE_INFO_INTEGRATION_NAME,
     TENANT_SERVICE_INFO_INTEGRATION_NAME,
     TRACING_INTEGRATION_NAME,
     WORKLOAD_CONTAINER_NAME,
 )
 from exceptions import PebbleServiceError
 from integrations import (
+    BYOSSOData,
     HydraEndpointData,
     KratosInfoData,
     PublicRouteData,
+    SSOServiceInfoData,
     TenantServiceInfoData,
     TracingData,
 )
 from services import PebbleService, WorkloadService
+from utils import is_true
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +105,9 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         # Tenant service
         self._tenant_service_info = TenantServiceInfoRequirer(
             self, relation_name=TENANT_SERVICE_INFO_INTEGRATION_NAME
+        )
+        self._sso_service_info = SSOServiceInfoRequirer(
+            self, relation_name=SSO_SERVICE_INFO_INTEGRATION_NAME
         )
 
         # Tracing
@@ -152,6 +161,14 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         )
         self.framework.observe(
             self.on[TENANT_SERVICE_INFO_INTEGRATION_NAME].relation_broken,
+            self._holistic_handler,
+        )
+        self.framework.observe(
+            self.on[SSO_SERVICE_INFO_INTEGRATION_NAME].relation_changed,
+            self._holistic_handler,
+        )
+        self.framework.observe(
+            self.on[SSO_SERVICE_INFO_INTEGRATION_NAME].relation_broken,
             self._holistic_handler,
         )
         self.framework.observe(
@@ -220,6 +237,10 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             public_route_config = PublicRouteData.load(self.public_route).config
             self.public_route.submit_config(public_route_config)
 
+        if status := self._byosso_status():
+            self.unit.status = status
+            return
+
         self.cert_transfer.push_ca_certs()
 
         logger.info("Pebble plan updated with new configuration, replanning")
@@ -230,7 +251,56 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             self.unit.status = BlockedStatus("Failed to replan, please consult the logs")
             return
 
+        self._update_byosso_relation_data()
         self.unit.status = ActiveStatus()
+
+    def _byosso_status(self) -> Optional[StatusBase]:
+        """Why "Bring Your Own SSO" cannot be applied, or None when it can.
+
+        login-ui refuses to start when BYOSSO_ENABLED lacks what it needs, and with the feature
+        off it would not enforce the tenants' sign-in policies. So the charm plans neither: it
+        reports what is missing and leaves the running layer.
+        """
+        if not self._byosso_enabled:
+            return None
+
+        kratos_info = KratosInfoData.load(self._kratos_info)
+        requirements = (
+            (
+                TENANT_SERVICE_INFO_INTEGRATION_NAME,
+                TenantServiceInfoData.load(self._tenant_service_info).is_ready,
+            ),
+            (
+                SSO_SERVICE_INFO_INTEGRATION_NAME,
+                SSOServiceInfoData.load(self._sso_service_info).is_ready,
+            ),
+            (KRATOS_INTEGRATION_NAME, kratos_info.is_ready),
+        )
+        for integration, is_ready in requirements:
+            if status := self._integration_status(integration, is_ready):
+                return status
+
+        # login-ui has to apply the same privileged session age as Kratos.
+        if not kratos_info.privileged_session_max_age:
+            return BlockedStatus("byosso_enabled needs a newer Kratos charm: refresh it")
+
+        if is_true(kratos_info.oidc_webauthn_sequencing_enabled):
+            return BlockedStatus("byosso_enabled conflicts with Kratos OIDC-WebAuthn sequencing")
+
+        # Kratos's charm refuses the feature without it, and would be left unconfigured.
+        if not is_true(kratos_info.verification_enabled):
+            return BlockedStatus("byosso_enabled requires Kratos's enable_verification")
+
+        return None
+
+    def _integration_status(self, integration: str, is_ready: bool) -> Optional[StatusBase]:
+        if not self.model.get_relation(integration):
+            return BlockedStatus(f"Missing integration {integration}")
+
+        if not is_ready:
+            return WaitingStatus(f"Waiting for {integration} data")
+
+        return None
 
     def _on_public_route_ready(self, event: RelationEvent) -> None:
         self.unit.status = MaintenanceStatus("Configuring resources")
@@ -262,6 +332,21 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
         return self.config.get("support_email")
 
     @property
+    def _byosso_enabled(self) -> bool:
+        return bool(self.config.get("byosso_enabled"))
+
+    @property
+    def _byosso_data(self) -> Optional[BYOSSOData]:
+        if not self._byosso_enabled:
+            return None
+
+        kratos_info = KratosInfoData.load(self._kratos_info)
+        return BYOSSOData(
+            sso_service_info=SSOServiceInfoData.load(self._sso_service_info),
+            privileged_session_max_age=kratos_info.privileged_session_max_age,
+        )
+
+    @property
     def _domain_url(self) -> Optional[str]:
         if not self.public_route.is_ready():
             return None
@@ -281,6 +366,7 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
             KratosInfoData.load(self._kratos_info),
             TracingData.load(self.tracing),
             TenantServiceInfoData.load(self._tenant_service_info),
+            self._byosso_data,
         )
 
     def _resource_reqs_from_config(self) -> ResourceRequirements:
@@ -306,6 +392,14 @@ class IdentityPlatformLoginUiOperatorCharm(CharmBase):
                 account_linking_settings_url=f"{endpoint}/ui/manage_connected_accounts",
                 verification_url=f"{endpoint}/ui/verification",
             )
+        )
+        # While the charm is blocked on the feature, what Kratos was told stays as it is.
+        if not self._byosso_status():
+            self._update_byosso_relation_data()
+
+    def _update_byosso_relation_data(self) -> None:
+        self.endpoints_provider.send_endpoints_relation_data(
+            LoginUIProviderData(byosso_enabled="true" if self._byosso_enabled else "false")
         )
 
 

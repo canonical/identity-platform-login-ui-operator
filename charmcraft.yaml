@@ -55,6 +55,12 @@ requires:
     optional: true
     description: |
       Receive tenant-service URL for multitenancy support.
+  sso-service-info:
+    interface: sso_service_info
+    limit: 1
+    optional: true
+    description: |
+      Receive sso-service's gRPC address. Required when `byosso_enabled` is true.
 provides:
   ui-endpoint-info:
     interface: login_ui_endpoints
@@ -99,6 +105,11 @@ config:
       description: |
         The email users can use to contact support
       type: string
+    byosso_enabled:
+      description: |
+        Enable "Bring Your Own SSO"
+      type: boolean
+      default: false
 platforms:
   ubuntu@22.04:amd64:
   ubuntu@22.04:arm64:
@@ -110,3 +121,6 @@ parts:
     source: .
     build-snaps:
       - astral-uv
+    build-packages:
+      # sso-service-info is installed from its repository.
+      - git

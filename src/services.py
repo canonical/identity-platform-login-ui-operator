@@ -13,7 +13,13 @@ from constants import (
     WORKLOAD_RUN_COMMAND,
 )
 from exceptions import PebbleServiceError
-from integrations import HydraEndpointData, KratosInfoData, TenantServiceInfoData, TracingData
+from integrations import (
+    BYOSSOData,
+    HydraEndpointData,
+    KratosInfoData,
+    TenantServiceInfoData,
+    TracingData,
+)
 
 
 class WorkloadService:
@@ -75,6 +81,7 @@ class PebbleService:
         kratos_info: KratosInfoData,
         tracing_data: TracingData,
         tenant_service_info: TenantServiceInfoData | None = None,
+        byosso: BYOSSOData | None = None,
     ) -> Layer:
         container = {
             "override": "replace",
@@ -115,6 +122,15 @@ class PebbleService:
         if tenant_service_info and tenant_service_info.is_ready:
             container["environment"]["TENANT_SERVICE_GRPC_ADDRESS"] = tenant_service_info.grpc_url
             container["environment"]["MULTI_TENANCY_ENABLED"] = True
+
+        # The charm passes it only with every requirement in place: login-ui refuses
+        # to start otherwise.
+        if byosso:
+            container["environment"].update({
+                "BYOSSO_ENABLED": True,
+                "SSO_SERVICE_GRPC_ADDRESS": byosso.sso_service_info.grpc_url,
+                "KRATOS_PRIVILEGED_SESSION_MAX_AGE": byosso.privileged_session_max_age,
+            })
 
         # Define Pebble layer configuration
         pebble_layer: LayerDict = {
