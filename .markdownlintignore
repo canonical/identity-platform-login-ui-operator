@@ -1,0 +1,14 @@
+CHANGELOG.md
+.github/instructions/
+.github/agents/
+.github/copilot/
+.github/copilot-instructions.md
+.github/*.md
+.github/prompts/
+.github/skills/openspec*/
+.agent/skills/openspec*/
+.agents/skills/openspec*/
+.agent/workflows/openspec*/
+.agents/workflows/openspec*/
+openspec/
+terraform/MODULE_SPECS.md

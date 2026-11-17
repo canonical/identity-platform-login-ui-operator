@@ -1,6 +1,7 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import platform
 from contextlib import contextmanager
 from typing import Callable, Iterator
 
@@ -20,7 +21,17 @@ def juju_model_factory(model_name: str) -> jubilant.Juju:
         if "already exists" not in e.stderr:
             raise
 
-        juju.model = model_name
+    juju.model = model_name
+
+    # Set model constraints dynamically based on native host architecture
+    arch_map = {
+        "aarch64": "arm64",
+        "arm64": "arm64",
+        "x86_64": "amd64",
+        "amd64": "amd64",
+    }
+    host_arch = arch_map.get(platform.machine().lower(), "amd64")
+    juju.cli("set-model-constraints", f"arch={host_arch}")
 
     return juju
 
@@ -92,11 +103,19 @@ def remove_integration(
 
 
 def all_active(*apps: str) -> StatusPredicate:
-    return lambda status: jubilant.all_active(status, *apps)
+    return lambda status: (
+        jubilant.all_active(status, *apps) and jubilant.all_agents_idle(status, *apps)
+    )
 
 
 def all_blocked(*apps: str) -> StatusPredicate:
-    return lambda status: jubilant.all_blocked(status, *apps)
+    return lambda status: (
+        jubilant.all_blocked(status, *apps) and jubilant.all_agents_idle(status, *apps)
+    )
+
+
+def all_idle(*apps: str) -> StatusPredicate:
+    return lambda status: jubilant.all_agents_idle(status, *apps)
 
 
 def any_error(*apps: str) -> StatusPredicate:
@@ -104,11 +123,11 @@ def any_error(*apps: str) -> StatusPredicate:
 
 
 def is_active(app: str) -> StatusPredicate:
-    return lambda status: status.apps[app].is_active
+    return lambda status: status.apps[app].is_active and jubilant.all_agents_idle(status, app)
 
 
 def is_blocked(app: str) -> StatusPredicate:
-    return lambda status: status.apps[app].is_blocked
+    return lambda status: status.apps[app].is_blocked and jubilant.all_agents_idle(status, app)
 
 
 def unit_number(app: str, expected_num: int) -> StatusPredicate:

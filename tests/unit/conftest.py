@@ -207,6 +207,7 @@ def tenant_service_relation() -> ops.testing.Relation:
         remote_app_name="tenant-service",
         remote_app_data={
             "service_url": "http://tenant-service:8080",
-            "grpc_url": "grpc://tenant-service:50051",
+            # tenant-service publishes a bare host:port, not a URL with a scheme.
+            "grpc_url": "tenant-service.namespace.svc.cluster.local:50051",
         },
     )

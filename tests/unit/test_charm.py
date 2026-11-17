@@ -173,8 +173,13 @@ class TestTenantServiceRelationEvents:
         layer = container_out.layers[WORKLOAD_CONTAINER_NAME]
         env = layer.services[WORKLOAD_CONTAINER_NAME].environment
 
-        assert env["TENANTS_SERVICE_URL"] == "http://tenant-service:8080"
+        assert (
+            env["TENANT_SERVICE_GRPC_ADDRESS"]
+            == "tenant-service.namespace.svc.cluster.local:50051"
+        )
         assert env["MULTI_TENANCY_ENABLED"] is True
+        # v0.27.0 read TENANTS_SERVICE_URL; v0.28.0 replaced it with the gRPC address.
+        assert "TENANTS_SERVICE_URL" not in env
 
     def test_layer_env_without_tenant_service_info(
         self,
@@ -191,6 +196,7 @@ class TestTenantServiceRelationEvents:
         env = layer.services[WORKLOAD_CONTAINER_NAME].environment
 
         assert "TENANTS_SERVICE_URL" not in env
+        assert "TENANT_SERVICE_GRPC_ADDRESS" not in env
         assert "MULTI_TENANCY_ENABLED" not in env
 
     def test_tenant_service_relation_broken(
