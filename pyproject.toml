@@ -18,6 +18,7 @@ dependencies = [
     "tenacity~=9.2.1",
     "yarl",
     "dacite",
+    "charmlibs-interfaces-certificate-transfer~=1.0.0",
     "charmlibs-interfaces-istio-ingress-route==1.0.2",
 ]
 
