@@ -13,7 +13,7 @@ from charms.hydra.v0.hydra_endpoints import (
     HydraEndpointsRequirer,
 )
 from charms.kratos.v0.kratos_info import KratosInfoRelationDataMissingError, KratosInfoRequirer
-from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
+from charms.tempo_coordinator_k8s.v0.tracing import TracingEndpointRequirer
 from charms.tenant_service.v0.tenant_service_info import TenantServiceInfoRequirer
 from charms.traefik_k8s.v0.traefik_route import TraefikRouteRequirer
 from jinja2 import Template
