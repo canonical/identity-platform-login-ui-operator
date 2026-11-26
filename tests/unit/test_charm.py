@@ -6,6 +6,7 @@
 from unittest.mock import patch
 
 import ops.testing
+import yaml
 from ops import ActiveStatus, BlockedStatus, WaitingStatus
 
 from constants import COOKIES_KEY, WORKLOAD_CONTAINER_NAME, WORKLOAD_RUN_COMMAND
@@ -256,6 +257,21 @@ class TestPublicRouteRelationEvents:
         state_out = context.run(context.on.pebble_ready(container), state_in)
 
         assert state_out.unit_status == ActiveStatus()
+        pub_rel = state_out.get_relation(public_route_relation.id)
+        raw_config = yaml.safe_load(pub_rel.local_app_data["config"])
+        routers = raw_config["http"]["routers"]
+        rules = {r["rule"] for r in routers.values()}
+        assert "PathPrefix(`/ui`)" not in rules
+        assert not any(name.endswith(("-router-ui", "-router-ui-tls")) for name in routers)
+        assert {
+            "PathPrefix(`/self-service`)",
+            "Path(`/api/device`)",
+            "Path(`/api/consent`)",
+            "Path(`/api/v0/app-config`)",
+            "Path(`/api/v0/tenants/resolve`)",
+            "Path(`/api/v0/tenants`)",
+            "Path(`/api/v0/auth/tenant`)",
+        }.issubset(rules)
 
     def test_public_route_broken(
         self,

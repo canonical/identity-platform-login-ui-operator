@@ -146,25 +146,6 @@
             }
           ]
         }
-      },
-      "juju-{{ identifier }}-public-api-router-ui": {
-        "entryPoints": ["web"],
-        "rule": "PathPrefix(`/ui`)",
-        "service": "juju-{{ identifier }}-public-api-service"
-      },
-      "juju-{{ identifier }}-public-api-router-ui-tls": {
-        "entryPoints": ["websecure"],
-        "rule": "PathPrefix(`/ui`)",
-        "service": "juju-{{ identifier }}-public-api-service",
-        "tls": {
-          "domains": [
-            {
-              "main": "{{ external_host }}",
-              "sans": ["*.{{ external_host }}"]
-
-            }
-          ]
-        }
       }
     },
     "services": {
