@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.5.0](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.4.2...v2.5.0) (2026-11-25)
+
+
+### Features
+
+* add byosso_enabled to the login_ui_endpoints library ([8510307](https://github.com/canonical/identity-platform-login-ui-operator/commit/8510307c02625855c4fefbb273bd74c510e24807))
+* add byosso_enabled to the login_ui_endpoints library ([#541](https://github.com/canonical/identity-platform-login-ui-operator/issues/541)) ([68a3447](https://github.com/canonical/identity-platform-login-ui-operator/commit/68a3447f4b0496bc7804db8a08dc415104eefab4))
+
 ## [2.4.2](https://github.com/canonical/identity-platform-login-ui-operator/compare/v2.4.1...v2.4.2) (2026-11-16)
 
 
