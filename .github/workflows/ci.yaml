@@ -24,7 +24,8 @@ jobs:
 
   tests:
     name: CI
-    uses: canonical/identity-team/.github/workflows/charm-pull-request.yaml@e710e7f451e62c37e7038d45b6c3bfa7dbfb28c0 # v1.20.0
+    uses: canonical/identity-team/.github/workflows/charm-pull-request.yaml@add-multi-juju-lifecycle-tests
     with:
       container-name: "login-ui"
       use-charmcraftcache: false
+      juju-channels: '["3.6/stable", "4.0/stable"]'
